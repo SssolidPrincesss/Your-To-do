@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/side_panel"
     android:layout_width="320dp"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/white"
+    android:background="#B23F51B5"
     android:elevation="8dp">
 
     <!-- Заголовок -->
@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp"
-        android:background="@color/white">
+        >
 
         <TextView
             android:layout_width="match_parent"
@@ -27,14 +27,34 @@
 
     </LinearLayout>
 
-    <!-- Список категорий -->
-    <com.google.android.material.navigation.NavigationView
-        android:id="@+id/nav_view"
+    <!-- Контейнер с маркерами и категориями -->
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="@color/white"
-        app:menu="@menu/nav_menu" />
+        android:layout_weight="1">
+
+        <!-- Цветные маркеры слева (фиксированные) -->
+        <LinearLayout
+            android:id="@+id/color_markers_container"
+            android:layout_width="10dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:orientation="vertical"
+            android:background="#FFFFFF">
+
+            <!-- Маркеры будут добавляться программно -->
+        </LinearLayout>
+
+        <!-- RecyclerView для категорий (с отступом слева для маркеров) -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/categories_recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+
+            android:paddingTop="8dp"
+            android:clipToPadding="false" />
+
+    </RelativeLayout>
 
     <!-- Кнопка закрытия внизу -->
     <LinearLayout
@@ -44,14 +64,7 @@
         android:orientation="vertical"
         android:padding="16dp"
         android:clickable="true"
-        android:focusable="true"
-        android:background="?attr/selectableItemBackground">
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#EEEEEE"
-            android:layout_marginBottom="16dp" />
+        android:focusable="true">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -70,7 +83,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Свернуть"
-                android:textColor="#666666"
+                android:textColor="#FFFFFF"
                 android:textSize="14sp" />
 
         </LinearLayout>

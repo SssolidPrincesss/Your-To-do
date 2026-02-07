@@ -6,17 +6,16 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
-import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bountyapp.yourrtodo.adapter.CategoryAdapter
 import com.bountyapp.yourrtodo.adapter.TaskAdapter
 import com.bountyapp.yourrtodo.model.Category
 import com.bountyapp.yourrtodo.model.Task
-import com.google.android.material.navigation.NavigationView
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
@@ -30,8 +29,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var taskAdapter: TaskAdapter
     private lateinit var fabAddTask: Button
-    private lateinit var navView: NavigationView
-    private lateinit var closeDrawer: LinearLayout
     private lateinit var collapseButton: LinearLayout
     private lateinit var sidePanel: LinearLayout
     private lateinit var drawerHandle: LinearLayout
@@ -43,13 +40,25 @@ class MainActivity : AppCompatActivity() {
     private val categories = mutableListOf<Category>()
     private var currentCategoryId: String = "all"
     private lateinit var mainContent: RelativeLayout
+    private lateinit var categoriesRecyclerView: RecyclerView
+
+    private lateinit var categoryAdapter: CategoryAdapter
+
+    // Константы для размеров
+    private companion object {
+        const val DRAWER_WIDTH_DP = 320f
+        const val VISIBLE_WIDTH_DP = 32f // ИЗМЕНИТЬ: 48f → 32f (отступ 32dp)
+    }
+
     private var closedPosition: Float = 0f
+    private var shiftAmount: Float = 0f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         mainContent = findViewById(R.id.main_content)
+
         // Инициализация всех элементов
         categoryTitle = findViewById(R.id.category_title)
         searchEditText = findViewById(R.id.search_edit_text)
@@ -59,23 +68,25 @@ class MainActivity : AppCompatActivity() {
         topBar = findViewById(R.id.top_bar)
         recyclerView = findViewById(R.id.recycler_view)
         fabAddTask = findViewById(R.id.fab_add_task)
-        navView = findViewById(R.id.nav_view)
         collapseButton = findViewById(R.id.collapse_button)
         sidePanel = findViewById(R.id.side_panel)
         drawerHandle = findViewById(R.id.drawer_handle)
+        categoriesRecyclerView = findViewById(R.id.categories_recycler_view)
 
-        // Явно устанавливаем начальное состояние
-        isDrawerOpen = false
-
+        // Вычисляем позиции с учетом плотности экрана
         val density = resources.displayMetrics.density
-        closedPosition = -272 * density
+        // Закрытая позиция: -(320dp - 32dp) = -288dp
+        closedPosition = -(DRAWER_WIDTH_DP - VISIBLE_WIDTH_DP) * density
+        // Сдвиг при открытии: 320dp
+        shiftAmount = DRAWER_WIDTH_DP * density
 
-        // Убедимся, что шторка закрыта (даже если в XML уже установлен translationX)
+        // Гарантируем начальное состояние
         sidePanel.post {
-            // Установим закрытое состояние после того как view будет отрисовано
-            sidePanel.translationX = -272f
+            sidePanel.translationX = closedPosition
+            mainContent.translationX = 0f
             drawerHandle.visibility = View.VISIBLE
             drawerHandle.alpha = 1f
+            sidePanel.isClickable = false // Шторка не кликабельна в закрытом состоянии
         }
 
         // Настройка данных
@@ -83,18 +94,15 @@ class MainActivity : AppCompatActivity() {
         setupTasks()
         setupRecyclerView()
         setupSearch()
-        setupNavigation()
+        setupCategoriesRecyclerView()
+        setupDrawer()
 
         fabAddTask.setOnClickListener {
             Toast.makeText(this, getString(R.string.add_new_task), Toast.LENGTH_SHORT).show()
         }
 
-        // Начальное состояние
-        sidePanel.post {
-            val closedPosition = -272 * resources.displayMetrics.density
-            sidePanel.translationX = closedPosition
-            drawerHandle.visibility = View.VISIBLE
-        }
+        // Явно устанавливаем начальное состояние
+        isDrawerOpen = false
     }
 
     private fun setupCategories() {
@@ -106,6 +114,24 @@ class MainActivity : AppCompatActivity() {
             Category(id = "study", name = "Учеба", color = "#9C27B0", isSelected = false),
             Category(id = "shopping", name = "Покупки", color = "#FF5722", isSelected = false)
         ))
+    }
+
+    private fun setupCategoriesRecyclerView() {
+        categoriesRecyclerView.layoutManager = LinearLayoutManager(this)
+        categoryAdapter = CategoryAdapter(categories) { category ->
+            selectCategory(category.id)
+        }
+        categoriesRecyclerView.adapter = categoryAdapter
+    }
+
+    private fun setupDrawer() {
+        drawerHandle.setOnClickListener {
+            toggleDrawer()
+        }
+
+        collapseButton.setOnClickListener {
+            toggleDrawer()
+        }
     }
 
     private fun setupTasks() {
@@ -259,36 +285,6 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun setupNavigation() {
-        drawerHandle.setOnClickListener {
-            toggleDrawer()
-        }
-
-
-        collapseButton.setOnClickListener {
-            toggleDrawer()
-        }
-
-        navView.setNavigationItemSelectedListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.nav_all -> selectCategory("all")
-                R.id.nav_work -> selectCategory("work")
-                R.id.nav_personal -> selectCategory("personal")
-                R.id.nav_study -> selectCategory("study")
-                R.id.nav_shopping -> selectCategory("shopping")
-                R.id.nav_add_category -> {
-                    showAddCategoryDialog()
-                    toggleDrawer()
-                    return@setNavigationItemSelectedListener true
-                }
-            }
-            toggleDrawer()
-            true
-        }
-
-        updateCategorySelection()
-    }
-
     private fun toggleDrawer() {
         updateDrawerState(!isDrawerOpen)
     }
@@ -299,9 +295,6 @@ class MainActivity : AppCompatActivity() {
         if (isOpen) {
             // Включаем клики по шторке
             sidePanel.isClickable = true
-
-            // Открываем шторку и сдвигаем основной контент
-            val shiftAmount = 320f * resources.displayMetrics.density
 
             sidePanel.animate()
                 .translationX(0f)
@@ -326,7 +319,6 @@ class MainActivity : AppCompatActivity() {
             // Отключаем клики по шторке
             sidePanel.isClickable = false
 
-            // Закрываем шторку и возвращаем контент
             sidePanel.animate()
                 .translationX(closedPosition)
                 .setDuration(300)
@@ -348,38 +340,25 @@ class MainActivity : AppCompatActivity() {
 
     private fun selectCategory(categoryId: String) {
         currentCategoryId = categoryId
-        updateCategorySelection()
+
+        // Обновляем выбор категорий
+        categories.forEach { it.isSelected = false }
+        categories.find { it.id == categoryId }?.isSelected = true
+
+        // Обновляем адаптер
+        categoryAdapter.notifyDataSetChanged()
+
+        // Обновляем верхнюю панель
         val category = categories.find { it.id == categoryId } ?: categories[0]
         updateTopBar(category)
+
+        // Обновляем задачи
         rebuildTasksList()
-    }
 
-    private fun updateCategorySelection() {
-        categories.forEach { it.isSelected = false }
-        categories.find { it.id == currentCategoryId }?.isSelected = true
-        updateMenuItems()
-    }
-
-    private fun updateMenuItems() {
-        navView.menu.findItem(R.id.nav_all).icon =
-            if (currentCategoryId == "all") getDrawable(R.drawable.ic_circle_selected)
-            else getDrawable(R.drawable.ic_circle_blue)
-
-        navView.menu.findItem(R.id.nav_work).icon =
-            if (currentCategoryId == "work") getDrawable(R.drawable.ic_circle_selected)
-            else getDrawable(R.drawable.ic_circle_blue)
-
-        navView.menu.findItem(R.id.nav_personal).icon =
-            if (currentCategoryId == "personal") getDrawable(R.drawable.ic_circle_selected)
-            else getDrawable(R.drawable.ic_circle_blue)
-
-        navView.menu.findItem(R.id.nav_study).icon =
-            if (currentCategoryId == "study") getDrawable(R.drawable.ic_circle_selected)
-            else getDrawable(R.drawable.ic_circle_blue)
-
-        navView.menu.findItem(R.id.nav_shopping).icon =
-            if (currentCategoryId == "shopping") getDrawable(R.drawable.ic_circle_selected)
-            else getDrawable(R.drawable.ic_circle_blue)
+        // Закрываем шторку
+        if (isDrawerOpen) {
+            toggleDrawer()
+        }
     }
 
     private fun updateTopBar(category: Category) {

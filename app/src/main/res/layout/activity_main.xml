@@ -2,23 +2,24 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/todobackground">
 
-    <!-- ОСНОВНОЙ КОНТЕНТ — сдвигаем вправо на 48dp -->
+    <!-- ОСНОВНОЙ КОНТЕНТ — сдвигаем вправо на 32dp -->
     <RelativeLayout
         android:id="@+id/main_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipChildren="false"
         android:clipToPadding="false"
-        android:layout_marginStart="48dp">
+        android:layout_marginStart="32dp">
 
         <!-- Верхняя панель -->
         <LinearLayout
             android:id="@+id/top_bar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="#E0F7FA"
+            android:background="#2196F3"
             android:orientation="horizontal"
             android:paddingStart="56dp"
             android:paddingEnd="16dp"
@@ -108,47 +109,24 @@
             app:labelVisibilityMode="labeled" />
     </RelativeLayout>
 
-    <!-- 🔴 ПОСТОЯННАЯ БОКОВАЯ ПАНЕЛЬ (48dp) — цветные маркеры -->
-    <LinearLayout
-        android:id="@+id/color_marker_panel"
-        android:layout_width="10dp"
-        android:layout_height="match_parent"
-        android:layout_gravity="start"
-        android:orientation="vertical"
-        android:background="#FFFFFF"
-        android:elevation="10dp">
-
-        <!-- Цветные маркеры — можно заменить на RecyclerView, но для простоты пока статика -->
-        <View android:layout_width="10dp" android:layout_height="48dp" android:background="#2196F3" />
-        <View android:layout_width="10dp" android:layout_height="48dp" android:background="#FFC107" />
-        <View android:layout_width="10dp" android:layout_height="48dp" android:background="#4CAF50" />
-        <View android:layout_width="10dp" android:layout_height="48dp" android:background="#F44336" />
-        <View android:layout_width="10dp" android:layout_height="48dp" android:background="#9C27B0" />
-        <View android:layout_width="10dp" android:layout_height="48dp" android:background="#673AB7" />
-        <!-- Добавьте остальные по макету -->
-
-    </LinearLayout>
-
-    <!-- 🟢 ШТОРКА — подключаем ваш side_panel.xml как отдельный компонент -->
-    <!-- Важно: width=320dp, translationX=-272dp → остаётся 48dp видимыми (за маркерами) -->
+    <!-- ШТОРКА -->
     <include
         android:id="@+id/side_panel"
         layout="@layout/drawer_panel"
         android:layout_width="320dp"
         android:layout_height="match_parent"
         android:layout_gravity="start|center_vertical"
-        android:elevation="8dp"
-        android:translationX="-272dp" />
+        android:elevation="8dp" />
 
-    <!-- Кнопка открытия шторки — поверх всего, под маркерами -->
+    <!-- Кнопка открытия шторки — уменьшаем ширину до 32dp -->
     <LinearLayout
         android:id="@+id/drawer_handle"
-        android:layout_width="48dp"
-        android:layout_height="80dp"
+        android:layout_width="32dp"
+        android:layout_height="58dp"
         android:layout_gravity="start|bottom"
         android:orientation="vertical"
         android:gravity="bottom"
-        android:background="#FFFFFF"
+
         android:clickable="true"
         android:focusable="true"
         android:elevation="20dp"
