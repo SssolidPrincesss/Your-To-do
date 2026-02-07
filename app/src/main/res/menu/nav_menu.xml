@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Все -->
+    <group android:id="@+id/group_categories">
+        <item
+            android:id="@+id/nav_all"
+            android:title="Все"
+            android:icon="@drawable/ic_circle_blue"
+            app:iconTint="#2196F3" />
+
+        <item
+            android:id="@+id/nav_work"
+            android:title="Работа"
+            android:icon="@drawable/ic_circle_blue"
+            app:iconTint="#4CAF50" />
+
+        <item
+            android:id="@+id/nav_personal"
+            android:title="Личное"
+            android:icon="@drawable/ic_circle_blue"
+            app:iconTint="#FF9800" />
+
+        <item
+            android:id="@+id/nav_study"
+            android:title="Учеба"
+            android:icon="@drawable/ic_circle_blue"
+            app:iconTint="#9C27B0" />
+
+        <item
+            android:id="@+id/nav_shopping"
+            android:title="Покупки"
+            android:icon="@drawable/ic_circle_blue"
+            app:iconTint="#FF5722" />
+    </group>
+
+    <!-- Разделитель -->
+    <item android:title="">
+        <menu>
+            <item
+                android:id="@+id/nav_add_category"
+                android:title="Добавить категорию"
+                android:icon="@drawable/ic_add"
+                app:iconTint="#666666" />
+        </menu>
+    </item>
+
+</menu>

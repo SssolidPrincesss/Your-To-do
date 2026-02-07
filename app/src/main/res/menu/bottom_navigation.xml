@@ -1,0 +1,14 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_home"
+        android:title="Главная"
+        android:icon="@drawable/ic_home" />
+    <item
+        android:id="@+id/nav_categories"
+        android:title="Категории"
+        android:icon="@drawable/ic_categories" />
+    <item
+        android:id="@+id/nav_ranking"
+        android:title="Рейтинг"
+        android:icon="@drawable/ic_ranking" />
+</menu>

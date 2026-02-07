@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Название приложения -->
+    <string name="app_name">BountyApp</string>
+    <string name="clear_search">Очистить поиск</string>
+
+    <string name="open_menu">Открыть меню</string>
+    <string name="category_all">Все</string>
+
+    <!-- Кнопки и действия -->
+    <string name="search_tasks">Поиск задач</string>
+    <string name="add_new_task">Добавить новую задачу</string>
+    <string name="open_categories">Открыть категории</string>
+    <string name="complete_task">Завершить задачу</string>
+    <string name="edit_task">Редактировать задачу</string>
+    <string name="delete_task">Удалить задачу</string>
+    <string name="save">Сохранить</string>
+    <string name="cancel">Отмена</string>
+    <string name="select_flag_color">Выбрать цвет флажка</string>
+    <string name="select_flag_color_for">Выбор цвета для \'%1$s\'</string>
+    <string name="category_work">Работа</string>
+
+    <!-- Секции задач -->
+    <string name="section_today">Сегодня</string>
+    <string name="section_planned">В планах</string>
+    <string name="section_completed">Выполнено</string>
+
+    <!-- Метки задач -->
+    <string name="reminder">Напоминание</string>
+    <string name="recurring_task">Повторяющаяся задача</string>
+    <string name="subtasks">Подзадачи</string>
+
+    <!-- Категории -->
+    <string name="toggle_category">Свернуть/развернуть категорию</string>
+    <string name="categories_expanded">Категории развернуты</string>
+    <string name="categories_collapsed">Категории свернуты</string>
+    <string name="collapse_menu">Свернуть</string>
+    <string name="expand_menu">Развернуть меню</string>
+
+    <!-- Уведомления -->
+    <string name="task_completed_with_points">✅ Задача \'%1$s\' завершена! +%2$d очков</string>
+    <string name="task_restored">↩️ Задача \'%1$s\' восстановлена</string>
+
+    <!-- Навигация -->
+    <string name="nav_home">Главная</string>
+    <string name="nav_categories">Категории</string>
+    <string name="nav_ranking">Рейтинг</string>
+    <string name="nav_profile">Профиль</string>
+    <string name="nav_settings">Настройки</string>
+
+    <!-- Поиск -->
+    <string name="search_hint">Поиск задач...</string>
+
+    <!-- Действия -->
+    <string name="toggle_section">Свернуть/развернуть секцию</string>
+</resources>

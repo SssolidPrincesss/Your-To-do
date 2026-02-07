@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/task_card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <!-- ЧЕКБОКС - ЕДИНСТВЕННЫЙ элемент для отметки задачи -->
+        <CheckBox
+            android:id="@+id/task_checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:button="@drawable/checkbox_selector"
+            android:background="@null"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="16dp" />
+
+        <!-- Основная информация (кликабельна через родительскую карточку) -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/task_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Создать годовой отчет"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:textColor="@android:color/black"
+                android:ellipsize="end"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/task_date"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="30.02 17:25"
+                android:textSize="14sp"
+                android:textColor="#757575"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
+
+        <!-- ПРАВАЯ ЧАСТЬ -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="end">
+
+            <!-- Флажок выбора цвета -->
+            <ImageButton
+                android:id="@+id/flag_button"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_flag"
+                android:contentDescription="@string/select_flag_color"
+                android:layout_gravity="center_horizontal" />
+
+            <!-- Метки -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+
+                <ImageView
+                    android:id="@+id/reminder_icon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_reminder"
+                    android:visibility="gone"
+                    android:contentDescription="@string/reminder" />
+
+                <ImageView
+                    android:id="@+id/recurring_icon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_recurring"
+                    android:visibility="gone"
+                    android:contentDescription="@string/recurring_task"
+                    android:layout_marginStart="4dp" />
+
+                <ImageView
+                    android:id="@+id/subtasks_icon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_subtasks"
+                    android:visibility="gone"
+                    android:contentDescription="@string/subtasks"
+                    android:layout_marginStart="4dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

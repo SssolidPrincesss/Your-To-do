@@ -1,0 +1,435 @@
+package com.bountyapp.yourrtodo
+
+import android.content.Context
+import android.graphics.Color
+import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.bountyapp.yourrtodo.adapter.TaskAdapter
+import com.bountyapp.yourrtodo.model.Category
+import com.bountyapp.yourrtodo.model.Task
+import com.google.android.material.navigation.NavigationView
+import java.util.*
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var categoryTitle: TextView
+    private lateinit var searchEditText: EditText
+    private lateinit var searchButton: ImageView
+    private lateinit var searchActionButton: ImageView
+    private lateinit var searchContainer: LinearLayout
+    private lateinit var topBar: LinearLayout
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var taskAdapter: TaskAdapter
+    private lateinit var fabAddTask: Button
+    private lateinit var navView: NavigationView
+    private lateinit var closeDrawer: LinearLayout
+    private lateinit var collapseButton: LinearLayout
+    private lateinit var sidePanel: LinearLayout
+    private lateinit var drawerHandle: LinearLayout
+
+    private var isSearchMode = false
+    private var isDrawerOpen = false
+    private val tasks = mutableListOf<Task>()
+    private val allTasks = mutableListOf<Task>()
+    private val categories = mutableListOf<Category>()
+    private var currentCategoryId: String = "all"
+    private lateinit var mainContent: RelativeLayout
+    private var closedPosition: Float = 0f
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        mainContent = findViewById(R.id.main_content)
+        // Инициализация всех элементов
+        categoryTitle = findViewById(R.id.category_title)
+        searchEditText = findViewById(R.id.search_edit_text)
+        searchButton = findViewById(R.id.search_button)
+        searchActionButton = findViewById(R.id.search_action_button)
+        searchContainer = findViewById(R.id.search_container)
+        topBar = findViewById(R.id.top_bar)
+        recyclerView = findViewById(R.id.recycler_view)
+        fabAddTask = findViewById(R.id.fab_add_task)
+        navView = findViewById(R.id.nav_view)
+        collapseButton = findViewById(R.id.collapse_button)
+        sidePanel = findViewById(R.id.side_panel)
+        drawerHandle = findViewById(R.id.drawer_handle)
+
+        // Явно устанавливаем начальное состояние
+        isDrawerOpen = false
+
+        val density = resources.displayMetrics.density
+        closedPosition = -272 * density
+
+        // Убедимся, что шторка закрыта (даже если в XML уже установлен translationX)
+        sidePanel.post {
+            // Установим закрытое состояние после того как view будет отрисовано
+            sidePanel.translationX = -272f
+            drawerHandle.visibility = View.VISIBLE
+            drawerHandle.alpha = 1f
+        }
+
+        // Настройка данных
+        setupCategories()
+        setupTasks()
+        setupRecyclerView()
+        setupSearch()
+        setupNavigation()
+
+        fabAddTask.setOnClickListener {
+            Toast.makeText(this, getString(R.string.add_new_task), Toast.LENGTH_SHORT).show()
+        }
+
+        // Начальное состояние
+        sidePanel.post {
+            val closedPosition = -272 * resources.displayMetrics.density
+            sidePanel.translationX = closedPosition
+            drawerHandle.visibility = View.VISIBLE
+        }
+    }
+
+    private fun setupCategories() {
+        // Дефолтные категории
+        categories.addAll(listOf(
+            Category(id = "all", name = "Все", color = "#2196F3", isSelected = true),
+            Category(id = "work", name = "Работа", color = "#4CAF50", isSelected = false),
+            Category(id = "personal", name = "Личное", color = "#FF9800", isSelected = false),
+            Category(id = "study", name = "Учеба", color = "#9C27B0", isSelected = false),
+            Category(id = "shopping", name = "Покупки", color = "#FF5722", isSelected = false)
+        ))
+    }
+
+    private fun setupTasks() {
+        tasks.addAll(listOf(
+            Task(
+                id = "1",
+                title = "Создать годовой отчет",
+                dueDate = null,
+                isCompleted = false,
+                isOverdue = false,
+                hasReminder = true,
+                isRecurring = false,
+                hasSubtasks = true,
+                flagColor = "#FFC107",
+                categoryId = "work"
+            ),
+            Task(
+                id = "2",
+                title = "Проверить почту",
+                dueDate = null,
+                isCompleted = false,
+                isOverdue = false,
+                hasReminder = false,
+                isRecurring = true,
+                hasSubtasks = false,
+                flagColor = "#4CAF50",
+                categoryId = "work"
+            ),
+            Task(
+                id = "3",
+                title = "Купить продукты",
+                dueDate = Calendar.getInstance().apply {
+                    add(Calendar.DAY_OF_MONTH, 1)
+                }.time,
+                isCompleted = false,
+                isOverdue = false,
+                hasReminder = true,
+                isRecurring = false,
+                hasSubtasks = false,
+                flagColor = "#2196F3",
+                categoryId = "shopping"
+            ),
+            Task(
+                id = "4",
+                title = "Сделать домашнее задание",
+                dueDate = Calendar.getInstance().apply {
+                    add(Calendar.DAY_OF_MONTH, 3)
+                }.time,
+                isCompleted = false,
+                isOverdue = false,
+                hasReminder = false,
+                isRecurring = false,
+                hasSubtasks = true,
+                flagColor = "#9C27B0",
+                categoryId = "study"
+            ),
+            Task(
+                id = "5",
+                title = "Позвонить родителям",
+                dueDate = Calendar.getInstance().apply {
+                    add(Calendar.DAY_OF_MONTH, -1)
+                }.time,
+                isCompleted = true,
+                isOverdue = false,
+                hasReminder = false,
+                isRecurring = false,
+                hasSubtasks = false,
+                flagColor = "#FF9800",
+                categoryId = "personal"
+            )
+        ))
+    }
+
+    private fun setupRecyclerView() {
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        rebuildTasksList()
+        taskAdapter = TaskAdapter(
+            context = this,
+            originalTasks = allTasks,
+            onTaskChecked = ::handleTaskCompletion
+        )
+        recyclerView.adapter = taskAdapter
+    }
+
+    private fun rebuildTasksList() {
+        allTasks.clear()
+        val filteredTasks = if (currentCategoryId == "all") tasks else tasks.filter { it.categoryId == currentCategoryId }
+
+        allTasks.add(Task.createSectionHeader(getString(R.string.section_today)))
+        allTasks.addAll(filteredTasks.filter { it.dueDate == null && !it.isCompleted })
+
+        allTasks.add(Task.createSectionHeader(getString(R.string.section_planned)))
+        allTasks.addAll(filteredTasks.filter { it.dueDate != null && !it.isCompleted })
+
+        allTasks.add(Task.createSectionHeader(getString(R.string.section_completed)))
+        allTasks.addAll(filteredTasks.filter { it.isCompleted })
+
+        if (::taskAdapter.isInitialized) {
+            taskAdapter.updateOriginalTasks(allTasks)
+        }
+    }
+
+    private fun handleTaskCompletion(task: Task) {
+        val index = tasks.indexOfFirst { it.id == task.id }
+        if (index != -1) {
+            val isNowCompleted = !tasks[index].isCompleted
+            tasks[index] = tasks[index].copy(isCompleted = isNowCompleted)
+            rebuildTasksList()
+
+            if (isNowCompleted) {
+                val pointsEarned = tasks[index].calculatePoints()
+                Toast.makeText(
+                    this,
+                    getString(R.string.task_completed_with_points, tasks[index].title, pointsEarned),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun setupSearch() {
+        searchButton.setOnClickListener {
+            if (isSearchMode) {
+                exitSearchMode()
+            } else {
+                enterSearchMode()
+            }
+        }
+
+        searchActionButton.setOnClickListener {
+            searchEditText.setText("")
+        }
+
+        searchEditText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                hideKeyboard()
+                true
+            } else {
+                false
+            }
+        }
+
+        searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val query = s?.toString()?.trim() ?: ""
+                searchActionButton.visibility = if (query.isNotEmpty()) View.VISIBLE else View.GONE
+                if (query.isNotEmpty()) taskAdapter.filter(query) else taskAdapter.clearSearch()
+            }
+        })
+    }
+
+    private fun setupNavigation() {
+        drawerHandle.setOnClickListener {
+            toggleDrawer()
+        }
+
+
+        collapseButton.setOnClickListener {
+            toggleDrawer()
+        }
+
+        navView.setNavigationItemSelectedListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.nav_all -> selectCategory("all")
+                R.id.nav_work -> selectCategory("work")
+                R.id.nav_personal -> selectCategory("personal")
+                R.id.nav_study -> selectCategory("study")
+                R.id.nav_shopping -> selectCategory("shopping")
+                R.id.nav_add_category -> {
+                    showAddCategoryDialog()
+                    toggleDrawer()
+                    return@setNavigationItemSelectedListener true
+                }
+            }
+            toggleDrawer()
+            true
+        }
+
+        updateCategorySelection()
+    }
+
+    private fun toggleDrawer() {
+        updateDrawerState(!isDrawerOpen)
+    }
+
+    private fun updateDrawerState(isOpen: Boolean) {
+        isDrawerOpen = isOpen
+
+        if (isOpen) {
+            // Включаем клики по шторке
+            sidePanel.isClickable = true
+
+            // Открываем шторку и сдвигаем основной контент
+            val shiftAmount = 320f * resources.displayMetrics.density
+
+            sidePanel.animate()
+                .translationX(0f)
+                .setDuration(300)
+                .start()
+
+            mainContent.animate()
+                .translationX(shiftAmount)
+                .setDuration(300)
+                .start()
+
+            // Прячем кнопку открытия
+            drawerHandle.animate()
+                .alpha(0f)
+                .setDuration(150)
+                .withEndAction {
+                    drawerHandle.visibility = View.GONE
+                }
+                .start()
+
+        } else {
+            // Отключаем клики по шторке
+            sidePanel.isClickable = false
+
+            // Закрываем шторку и возвращаем контент
+            sidePanel.animate()
+                .translationX(closedPosition)
+                .setDuration(300)
+                .start()
+
+            mainContent.animate()
+                .translationX(0f)
+                .setDuration(300)
+                .start()
+
+            // Показываем кнопку открытия
+            drawerHandle.visibility = View.VISIBLE
+            drawerHandle.animate()
+                .alpha(1f)
+                .setDuration(150)
+                .start()
+        }
+    }
+
+    private fun selectCategory(categoryId: String) {
+        currentCategoryId = categoryId
+        updateCategorySelection()
+        val category = categories.find { it.id == categoryId } ?: categories[0]
+        updateTopBar(category)
+        rebuildTasksList()
+    }
+
+    private fun updateCategorySelection() {
+        categories.forEach { it.isSelected = false }
+        categories.find { it.id == currentCategoryId }?.isSelected = true
+        updateMenuItems()
+    }
+
+    private fun updateMenuItems() {
+        navView.menu.findItem(R.id.nav_all).icon =
+            if (currentCategoryId == "all") getDrawable(R.drawable.ic_circle_selected)
+            else getDrawable(R.drawable.ic_circle_blue)
+
+        navView.menu.findItem(R.id.nav_work).icon =
+            if (currentCategoryId == "work") getDrawable(R.drawable.ic_circle_selected)
+            else getDrawable(R.drawable.ic_circle_blue)
+
+        navView.menu.findItem(R.id.nav_personal).icon =
+            if (currentCategoryId == "personal") getDrawable(R.drawable.ic_circle_selected)
+            else getDrawable(R.drawable.ic_circle_blue)
+
+        navView.menu.findItem(R.id.nav_study).icon =
+            if (currentCategoryId == "study") getDrawable(R.drawable.ic_circle_selected)
+            else getDrawable(R.drawable.ic_circle_blue)
+
+        navView.menu.findItem(R.id.nav_shopping).icon =
+            if (currentCategoryId == "shopping") getDrawable(R.drawable.ic_circle_selected)
+            else getDrawable(R.drawable.ic_circle_blue)
+    }
+
+    private fun updateTopBar(category: Category) {
+        categoryTitle.text = category.name
+        topBar.setBackgroundColor(Color.parseColor(category.color))
+    }
+
+    private fun showAddCategoryDialog() {
+        Toast.makeText(this, "Добавить новую категорию", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun enterSearchMode() {
+        isSearchMode = true
+        searchButton.setImageResource(R.drawable.ic_close)
+        categoryTitle.visibility = View.GONE
+        searchContainer.visibility = View.VISIBLE
+        searchEditText.requestFocus()
+
+        searchEditText.postDelayed({
+            showKeyboard()
+        }, 100)
+    }
+
+    private fun exitSearchMode() {
+        isSearchMode = false
+        searchButton.setImageResource(R.drawable.ic_search)
+        searchEditText.setText("")
+        searchContainer.visibility = View.GONE
+        categoryTitle.visibility = View.VISIBLE
+        taskAdapter.clearSearch()
+        hideKeyboard()
+    }
+
+    private fun showKeyboard() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(searchEditText, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun hideKeyboard() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(searchEditText.windowToken, 0)
+    }
+
+    override fun onBackPressed() {
+        if (isDrawerOpen) {
+            toggleDrawer()
+        } else if (isSearchMode) {
+            exitSearchMode()
+        } else {
+            super.onBackPressed()
+        }
+    }
+}

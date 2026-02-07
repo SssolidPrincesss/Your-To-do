@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingStart="16dp"
+    android:paddingTop="16dp"
+    android:paddingBottom="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:background="?attr/selectableItemBackground">
+
+    <!-- Название секции -->
+    <TextView
+        android:id="@+id/section_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="#555555" />
+
+    <!-- Треугольник сворачивания -->
+    <ImageView
+        android:id="@+id/section_arrow"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:src="@drawable/ic_arrow_down"
+        android:contentDescription="@string/toggle_section"
+        android:layout_gravity="center_vertical"
+        android:layout_marginStart="8dp" />
+
+</LinearLayout>

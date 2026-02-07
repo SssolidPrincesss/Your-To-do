@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Базовая тема, наследующая от AppCompat -->
+    <style name="Theme.YourrToDo" parent="Theme.AppCompat.DayNight">
+        <!-- Primary brand color -->
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorOnPrimary">@color/white</item>
+
+        <!-- Secondary brand color -->
+        <item name="colorSecondary">@color/teal_200</item>
+        <item name="colorSecondaryVariant">@color/teal_700</item>
+        <item name="colorOnSecondary">@color/black</item>
+
+        <!-- Status bar -->
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+
+        <!-- Если хотите Material Design компоненты -->
+        <item name="android:windowBackground">@color/white</item>
+        <item name="colorControlNormal">@color/black</item>
+
+        <!-- Для DrawerLayout -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+
+        <!-- Делаем шторку с прозрачными краями -->
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+    </style>
+
+
+</resources>

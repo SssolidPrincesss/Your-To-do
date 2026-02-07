@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- ОСНОВНОЙ КОНТЕНТ — сдвигаем вправо на 48dp -->
+    <RelativeLayout
+        android:id="@+id/main_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:layout_marginStart="48dp">
+
+        <!-- Верхняя панель -->
+        <LinearLayout
+            android:id="@+id/top_bar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="#E0F7FA"
+            android:orientation="horizontal"
+            android:paddingStart="56dp"
+            android:paddingEnd="16dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/category_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/category_all"
+                android:textColor="#000000"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:gravity="start|center_vertical" />
+
+            <LinearLayout
+                android:id="@+id/search_container"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <EditText
+                    android:id="@+id/search_edit_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/search_background"
+                    android:hint="@string/search_hint"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:paddingVertical="8dp"
+                    android:paddingHorizontal="12dp"
+                    android:textColor="#000000"
+                    android:textColorHint="#757575" />
+
+                <ImageView
+                    android:id="@+id/search_action_button"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="8dp"
+                    android:src="@drawable/ic_close"
+                    android:contentDescription="@string/clear_search"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/search_button"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_search"
+                android:contentDescription="@string/search_tasks" />
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@id/top_bar"
+            android:paddingBottom="150dp"
+            android:clipToPadding="false" />
+
+        <Button
+            android:id="@+id/fab_add_task"
+            android:layout_width="70dp"
+            android:layout_height="70dp"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="90dp"
+            android:background="@drawable/fab_background"
+            android:text="+"
+            android:textSize="32sp"
+            android:textColor="@android:color/white"
+            android:elevation="8dp"
+            android:stateListAnimator="@null" />
+
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottom_navigation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:background="#6E305BAB"
+            app:menu="@menu/bottom_navigation"
+            app:labelVisibilityMode="labeled" />
+    </RelativeLayout>
+
+    <!-- 🔴 ПОСТОЯННАЯ БОКОВАЯ ПАНЕЛЬ (48dp) — цветные маркеры -->
+    <LinearLayout
+        android:id="@+id/color_marker_panel"
+        android:layout_width="10dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:orientation="vertical"
+        android:background="#FFFFFF"
+        android:elevation="10dp">
+
+        <!-- Цветные маркеры — можно заменить на RecyclerView, но для простоты пока статика -->
+        <View android:layout_width="10dp" android:layout_height="48dp" android:background="#2196F3" />
+        <View android:layout_width="10dp" android:layout_height="48dp" android:background="#FFC107" />
+        <View android:layout_width="10dp" android:layout_height="48dp" android:background="#4CAF50" />
+        <View android:layout_width="10dp" android:layout_height="48dp" android:background="#F44336" />
+        <View android:layout_width="10dp" android:layout_height="48dp" android:background="#9C27B0" />
+        <View android:layout_width="10dp" android:layout_height="48dp" android:background="#673AB7" />
+        <!-- Добавьте остальные по макету -->
+
+    </LinearLayout>
+
+    <!-- 🟢 ШТОРКА — подключаем ваш side_panel.xml как отдельный компонент -->
+    <!-- Важно: width=320dp, translationX=-272dp → остаётся 48dp видимыми (за маркерами) -->
+    <include
+        android:id="@+id/side_panel"
+        layout="@layout/drawer_panel"
+        android:layout_width="320dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start|center_vertical"
+        android:elevation="8dp"
+        android:translationX="-272dp" />
+
+    <!-- Кнопка открытия шторки — поверх всего, под маркерами -->
+    <LinearLayout
+        android:id="@+id/drawer_handle"
+        android:layout_width="48dp"
+        android:layout_height="80dp"
+        android:layout_gravity="start|bottom"
+        android:orientation="vertical"
+        android:gravity="bottom"
+        android:background="#FFFFFF"
+        android:clickable="true"
+        android:focusable="true"
+        android:elevation="20dp"
+        android:translationZ="10dp"
+        android:outlineProvider="bounds"
+        android:padding="8dp">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_menu_handle"
+            android:layout_marginBottom="20dp"
+            android:contentDescription="@string/open_menu" />
+    </LinearLayout>
+
+</FrameLayout>
