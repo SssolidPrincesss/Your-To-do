@@ -54,7 +54,11 @@
             android:paddingTop="8dp"
             android:clipToPadding="false" />
 
+
+
     </RelativeLayout>
+
+
 
     <!-- Кнопка закрытия внизу -->
     <LinearLayout
@@ -70,21 +74,23 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
 
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:src="@drawable/ic_chevron_left"
                 android:contentDescription="@string/collapse_menu"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="8dp"
+                />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Свернуть"
                 android:textColor="#FFFFFF"
-                android:textSize="14sp" />
+                android:textSize="16sp" />
 
         </LinearLayout>
 

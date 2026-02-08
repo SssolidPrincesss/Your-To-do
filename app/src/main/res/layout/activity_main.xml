@@ -18,12 +18,14 @@
         <LinearLayout
             android:id="@+id/top_bar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
+            android:layout_height="56dp"
             android:background="#2196F3"
             android:orientation="horizontal"
-            android:paddingStart="56dp"
+            android:paddingStart="20dp"
             android:paddingEnd="16dp"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:elevation="4dp"
+            android:translationZ="4dp">
 
             <TextView
                 android:id="@+id/category_title"
@@ -33,7 +35,7 @@
                 android:text="@string/category_all"
                 android:textColor="#000000"
                 android:textStyle="bold"
-                android:textSize="18sp"
+                android:textSize="22sp"
                 android:gravity="start|center_vertical" />
 
             <LinearLayout
@@ -81,9 +83,10 @@
             android:id="@+id/recycler_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_below="@id/top_bar"
+            android:paddingTop="56dp"
             android:paddingBottom="150dp"
-            android:clipToPadding="false" />
+            android:clipToPadding="false"
+            android:clipChildren="false" />
 
         <Button
             android:id="@+id/fab_add_task"

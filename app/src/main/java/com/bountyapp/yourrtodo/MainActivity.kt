@@ -43,6 +43,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var categoriesRecyclerView: RecyclerView
 
     private lateinit var categoryAdapter: CategoryAdapter
+    private lateinit var searchClearButton: ImageView
+
+    private var lastButtonClickTime = 0L
+    private val DOUBLE_CLICK_THRESHOLD = 300L
+
 
     // Константы для размеров
     private companion object {
@@ -73,12 +78,14 @@ class MainActivity : AppCompatActivity() {
         drawerHandle = findViewById(R.id.drawer_handle)
         categoriesRecyclerView = findViewById(R.id.categories_recycler_view)
 
+        setupTopBarTransparency()
+
         // Вычисляем позиции с учетом плотности экрана
         val density = resources.displayMetrics.density
         // Закрытая позиция: -(320dp - 32dp) = -288dp
         closedPosition = -(DRAWER_WIDTH_DP - VISIBLE_WIDTH_DP) * density
         // Сдвиг при открытии: 320dp
-        shiftAmount = DRAWER_WIDTH_DP * density
+        shiftAmount = (DRAWER_WIDTH_DP - VISIBLE_WIDTH_DP) * density
 
         // Гарантируем начальное состояние
         sidePanel.post {
@@ -105,6 +112,10 @@ class MainActivity : AppCompatActivity() {
         isDrawerOpen = false
     }
 
+    private fun setupTopBarTransparency() {
+        topBar.alpha = 0.7f
+    }
+
     private fun setupCategories() {
         // Дефолтные категории
         categories.addAll(listOf(
@@ -118,9 +129,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupCategoriesRecyclerView() {
         categoriesRecyclerView.layoutManager = LinearLayoutManager(this)
-        categoryAdapter = CategoryAdapter(categories) { category ->
-            selectCategory(category.id)
-        }
+        categoryAdapter = CategoryAdapter(
+            categories = categories,
+            onCategoryClick = { category ->
+                selectCategory(category.id)
+            },
+            onAddCategoryClick = {
+                showAddCategoryDialog()
+            }
+        )
         categoriesRecyclerView.adapter = categoryAdapter
     }
 
@@ -201,6 +218,34 @@ class MainActivity : AppCompatActivity() {
                 hasSubtasks = false,
                 flagColor = "#FF9800",
                 categoryId = "personal"
+            ),
+            Task(
+                id = "6",
+                title = "Погулять с динозварвом ",
+                dueDate = Calendar.getInstance().apply {
+                    add(Calendar.DAY_OF_MONTH, -1)
+                }.time,
+                isCompleted = true,
+                isOverdue = false,
+                hasReminder = false,
+                isRecurring = false,
+                hasSubtasks = false,
+                flagColor = "#FF9800",
+                categoryId = "personal"
+            ),
+            Task(
+                id = "7",
+                title = "Купить дом",
+                dueDate = Calendar.getInstance().apply {
+                    add(Calendar.DAY_OF_MONTH, -1)
+                }.time,
+                isCompleted = true,
+                isOverdue = false,
+                hasReminder = false,
+                isRecurring = false,
+                hasSubtasks = false,
+                flagColor = "#FF9800",
+                categoryId = "personal"
             )
         ))
     }
@@ -254,17 +299,34 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupSearch() {
         searchButton.setOnClickListener {
+            val currentTime = System.currentTimeMillis()
+            val timeDiff = currentTime - lastButtonClickTime
+
             if (isSearchMode) {
-                exitSearchMode()
+                // Режим поиска активен
+                if (searchEditText.text.isNullOrEmpty()) {
+                    // Поле пустое → закрываем поиск
+                    exitSearchMode()
+                } else {
+                    // Есть текст → проверяем двойной клик
+                    if (timeDiff < DOUBLE_CLICK_THRESHOLD) {
+                        // Двойной клик → закрываем поиск
+                        exitSearchMode()
+                    } else {
+                        // Первый клик → очищаем текст
+                        searchEditText.setText("")
+                        searchEditText.requestFocus()
+                    }
+                }
             } else {
+                // Обычный режим → открываем поиск
                 enterSearchMode()
             }
+
+            lastButtonClickTime = currentTime
         }
 
-        searchActionButton.setOnClickListener {
-            searchEditText.setText("")
-        }
-
+        // Обработка клавиатуры
         searchEditText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 hideKeyboard()
@@ -274,14 +336,26 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Обновление иконки при изменении текста
         searchEditText.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val query = s?.toString()?.trim() ?: ""
-                searchActionButton.visibility = if (query.isNotEmpty()) View.VISIBLE else View.GONE
-                if (query.isNotEmpty()) taskAdapter.filter(query) else taskAdapter.clearSearch()
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (isSearchMode) {
+                    val query = s?.toString()?.trim() ?: ""
+                    if (query.isEmpty()) {
+                        taskAdapter.clearSearch()
+                    } else {
+                        taskAdapter.filter(query)
+                    }
+
+                    // Меняем иконку
+                    searchButton.setImageResource(
+                        if (s.isNullOrEmpty()) R.drawable.ic_close
+                        else R.drawable.ic_close
+                    )
+                }
             }
+            override fun afterTextChanged(s: Editable?) {}
         })
     }
 
@@ -367,6 +441,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAddCategoryDialog() {
+        // TODO: Реализовать диалог добавления категории
         Toast.makeText(this, "Добавить новую категорию", Toast.LENGTH_SHORT).show()
     }
 
