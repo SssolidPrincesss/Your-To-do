@@ -1,14 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/nav_home"
         android:title="Главная"
         android:icon="@drawable/ic_home" />
+
     <item
-        android:id="@+id/nav_categories"
-        android:title="Категории"
-        android:icon="@drawable/ic_categories" />
+        android:id="@+id/nav_calendar"
+        android:title="Календарь"
+        android:icon="@drawable/ic_add" />
+
     <item
-        android:id="@+id/nav_ranking"
-        android:title="Рейтинг"
-        android:icon="@drawable/ic_ranking" />
+        android:id="@+id/nav_achievements"
+        android:title="Достижения"
+        android:icon="@drawable/ic_flag" />
+
+    <item
+        android:id="@+id/nav_settings"
+        android:title="Настройки"
+        android:icon="@drawable/ic_subtasks" />
 </menu>

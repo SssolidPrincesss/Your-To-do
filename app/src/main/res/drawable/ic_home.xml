@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 
-</selector>
+    <!-- Галочка (вектор) -->
+    <item
+        android:width="14dp"
+        android:height="14dp"
+        android:drawable="@drawable/ic_check_vector"
+        android:gravity="center" />
+</layer-list>

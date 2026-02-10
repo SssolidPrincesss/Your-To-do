@@ -3,125 +3,44 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/todobackground">
+    android:background="@drawable/todobackground"> <!-- Ваш фон на ВСЕМ экране -->
 
-    <!-- ОСНОВНОЙ КОНТЕНТ — сдвигаем вправо на 32dp -->
-    <RelativeLayout
-        android:id="@+id/main_content"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clipChildren="false"
-        android:clipToPadding="false"
-        android:layout_marginStart="32dp">
-
-        <!-- Верхняя панель -->
-        <LinearLayout
-            android:id="@+id/top_bar"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="#2196F3"
-            android:orientation="horizontal"
-            android:paddingStart="20dp"
-            android:paddingEnd="16dp"
-            android:gravity="center_vertical"
-            android:elevation="4dp"
-            android:translationZ="4dp">
-
-            <TextView
-                android:id="@+id/category_title"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/category_all"
-                android:textColor="#000000"
-                android:textStyle="bold"
-                android:textSize="22sp"
-                android:gravity="start|center_vertical" />
-
-            <LinearLayout
-                android:id="@+id/search_container"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:visibility="gone">
-
-                <EditText
-                    android:id="@+id/search_edit_text"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:background="@drawable/search_background"
-                    android:hint="@string/search_hint"
-                    android:imeOptions="actionSearch"
-                    android:inputType="text"
-                    android:paddingVertical="8dp"
-                    android:paddingHorizontal="12dp"
-                    android:textColor="#000000"
-                    android:textColorHint="#757575" />
-
-                <ImageView
-                    android:id="@+id/search_action_button"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_marginStart="8dp"
-                    android:src="@drawable/ic_close"
-                    android:contentDescription="@string/clear_search"
-                    android:visibility="gone" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/search_button"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_search"
-                android:contentDescription="@string/search_tasks" />
-        </LinearLayout>
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:paddingTop="56dp"
-            android:paddingBottom="150dp"
-            android:clipToPadding="false"
-            android:clipChildren="false" />
-
-        <Button
-            android:id="@+id/fab_add_task"
-            android:layout_width="70dp"
-            android:layout_height="70dp"
-            android:layout_centerHorizontal="true"
-            android:layout_alignParentBottom="true"
-            android:layout_marginBottom="90dp"
-            android:background="@drawable/fab_background"
-            android:text="+"
-            android:textSize="32sp"
-            android:textColor="@android:color/white"
-            android:elevation="8dp"
-            android:stateListAnimator="@null" />
-
-        <com.google.android.material.bottomnavigation.BottomNavigationView
-            android:id="@+id/bottom_navigation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:background="#6E305BAB"
-            app:menu="@menu/bottom_navigation"
-            app:labelVisibilityMode="labeled" />
-    </RelativeLayout>
-
-    <!-- ШТОРКА -->
+    <!-- ШТОРКА - растягиваем на всю высоту -->
     <include
         android:id="@+id/side_panel"
         layout="@layout/drawer_panel"
         android:layout_width="320dp"
         android:layout_height="match_parent"
-        android:layout_gravity="start|center_vertical"
-        android:elevation="8dp" />
+        android:layout_gravity="start" />
 
-    <!-- Кнопка открытия шторки — уменьшаем ширину до 32dp -->
+    <!-- ОСНОВНОЙ КОНТЕНТ с margin для шторки -->
+    <LinearLayout
+        android:id="@+id/main_content_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:layout_marginStart="32dp"
+        > <!-- Повторяем фон -->
+
+        <!-- Контейнер для фрагментов -->
+        <FrameLayout
+            android:id="@+id/fragment_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Bottom Navigation -->
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottom_navigation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#6E305BAB"
+            app:menu="@menu/bottom_navigation"
+            app:labelVisibilityMode="labeled" />
+
+    </LinearLayout>
+
+    <!-- Кнопка открытия шторки -->
     <LinearLayout
         android:id="@+id/drawer_handle"
         android:layout_width="32dp"
@@ -129,20 +48,20 @@
         android:layout_gravity="start|bottom"
         android:orientation="vertical"
         android:gravity="bottom"
-
         android:clickable="true"
         android:focusable="true"
         android:elevation="20dp"
         android:translationZ="10dp"
         android:outlineProvider="bounds"
-        android:padding="8dp">
+        android:padding="8dp"
+        >
 
         <ImageView
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_menu_handle"
             android:layout_marginBottom="20dp"
-            android:contentDescription="@string/open_menu" />
+            android:contentDescription="Открыть меню" />
     </LinearLayout>
 
 </FrameLayout>
