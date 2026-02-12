@@ -71,6 +71,7 @@ class FragmentHome : Fragment() {
 
     private fun setupData() {
         // Категории
+        categories.clear()
         categories.addAll(listOf(
             Category(id = "all", name = "Все", color = "#2196F3", isSelected = true),
             Category(id = "work", name = "Работа", color = "#4CAF50", isSelected = false),
@@ -80,6 +81,11 @@ class FragmentHome : Fragment() {
         ))
 
         // Задачи
+        setupTasks()
+    }
+
+    private fun setupTasks() {
+        tasks.clear()
         tasks.addAll(listOf(
             Task(
                 id = "1",
@@ -146,34 +152,6 @@ class FragmentHome : Fragment() {
                 hasSubtasks = false,
                 flagColor = "#FF9800",
                 categoryId = "personal"
-            ),
-            Task(
-                id = "6",
-                title = "Погулять с динозварвом ",
-                dueDate = Calendar.getInstance().apply {
-                    add(Calendar.DAY_OF_MONTH, -1)
-                }.time,
-                isCompleted = true,
-                isOverdue = false,
-                hasReminder = false,
-                isRecurring = false,
-                hasSubtasks = false,
-                flagColor = "#FF9800",
-                categoryId = "personal"
-            ),
-            Task(
-                id = "7",
-                title = "Купить дом",
-                dueDate = Calendar.getInstance().apply {
-                    add(Calendar.DAY_OF_MONTH, -1)
-                }.time,
-                isCompleted = true,
-                isOverdue = false,
-                hasReminder = false,
-                isRecurring = false,
-                hasSubtasks = false,
-                flagColor = "#FF9800",
-                categoryId = "personal"
             )
         ))
     }
@@ -229,10 +207,9 @@ class FragmentHome : Fragment() {
             rebuildTasksList()
 
             if (isNowCompleted) {
-                val pointsEarned = tasks[index].calculatePoints()
                 Toast.makeText(
                     requireContext(),
-                    "Задача выполнена: ${tasks[index].title} (+$pointsEarned очков)",
+                    "Задача выполнена: ${tasks[index].title}",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -245,30 +222,23 @@ class FragmentHome : Fragment() {
             val timeDiff = currentTime - lastButtonClickTime
 
             if (isSearchMode) {
-                // Режим поиска активен
                 if (searchEditText.text.isNullOrEmpty()) {
-                    // Поле пустое → закрываем поиск
                     exitSearchMode()
                 } else {
-                    // Есть текст → проверяем двойной клик
                     if (timeDiff < DOUBLE_CLICK_THRESHOLD) {
-                        // Двойной клик → закрываем поиск
                         exitSearchMode()
                     } else {
-                        // Первый клик → очищаем текст
                         searchEditText.setText("")
                         searchEditText.requestFocus()
                     }
                 }
             } else {
-                // Обычный режим → открываем поиск
                 enterSearchMode()
             }
 
             lastButtonClickTime = currentTime
         }
 
-        // Обработка клавиатуры
         searchEditText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 hideKeyboard()
@@ -278,7 +248,6 @@ class FragmentHome : Fragment() {
             }
         }
 
-        // Обновление иконки при изменении текста
         searchEditText.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -289,12 +258,6 @@ class FragmentHome : Fragment() {
                     } else {
                         taskAdapter.filter(query)
                     }
-
-                    // Меняем иконку
-                    searchButton.setImageResource(
-                        if (s.isNullOrEmpty()) R.drawable.ic_close
-                        else R.drawable.ic_close
-                    )
                 }
             }
             override fun afterTextChanged(s: Editable?) {}
@@ -307,10 +270,7 @@ class FragmentHome : Fragment() {
         categoryTitle.visibility = View.GONE
         searchContainer.visibility = View.VISIBLE
         searchEditText.requestFocus()
-
-        searchEditText.postDelayed({
-            showKeyboard()
-        }, 100)
+        showKeyboard()
     }
 
     private fun exitSearchMode() {
@@ -335,19 +295,15 @@ class FragmentHome : Fragment() {
 
     fun selectCategory(categoryId: String) {
         currentCategoryId = categoryId
-
-        // Обновляем выбор категорий
         categories.forEach { it.isSelected = false }
         categories.find { it.id == categoryId }?.isSelected = true
 
-        // Обновляем адаптер
-        categoryAdapter?.notifyDataSetChanged()
+        if (::categoryAdapter.isInitialized) {
+            categoryAdapter.notifyDataSetChanged()
+        }
 
-        // Обновляем верхнюю панель
         val category = categories.find { it.id == categoryId } ?: categories[0]
         updateTopBar(category)
-
-        // Обновляем задачи
         rebuildTasksList()
     }
 
@@ -357,11 +313,30 @@ class FragmentHome : Fragment() {
     }
 
     // Методы для связи с MainActivity
-    fun getCategories(): List<Category> = categories
+    fun getCategories(): MutableList<Category> = categories
 
     fun setCategoryAdapter(adapter: CategoryAdapter) {
         categoryAdapter = adapter
     }
 
     fun getCurrentCategoryId(): String = currentCategoryId
+
+    fun addCategory(name: String, color: String) {
+        val newCategory = Category(
+            id = "category_${System.currentTimeMillis()}",
+            name = name,
+            color = color,
+            isSelected = false
+        )
+
+        // Добавляем в список
+        categories.add(newCategory)
+
+        // Обновляем адаптер
+        if (::categoryAdapter.isInitialized) {
+            categoryAdapter.notifyItemInserted(categories.size - 1)
+        }
+
+        Toast.makeText(requireContext(), "Категория '$name' добавлена", Toast.LENGTH_SHORT).show()
+    }
 }

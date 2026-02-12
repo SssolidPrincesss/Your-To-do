@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@android:color/white">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Выберите цвет"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="20dp"
+        android:gravity="center"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="20dp">
+
+        <!-- 2D палитра для оттенка и насыщенности -->
+        <com.bountyapp.yourrtodo.views.ColorPaletteView
+            android:id="@+id/color_palette"
+            android:layout_width="0dp"
+            android:layout_height="200dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="16dp"/>
+
+        <!-- Вертикальный слайдер для яркости -->
+        <com.bountyapp.yourrtodo.views.BrightnessSliderView
+            android:id="@+id/brightness_slider"
+            android:layout_width="40dp"
+            android:layout_height="200dp"
+            android:layout_marginEnd="16dp"/>
+
+        <!-- Предпросмотр цвета -->
+        <View
+            android:id="@+id/color_preview"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:background="@drawable/circle_background"
+            android:layout_gravity="center"/>
+    </LinearLayout>
+
+    <!-- Дополнительные элементы управления -->
+
+    <!-- Ползунок насыщенности (опционально) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Насыщенность"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <SeekBar
+            android:id="@+id/seek_saturation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:progress="100" />
+    </LinearLayout>
+
+    <!-- HEX значение -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp"
+        android:background="#F5F5F5"
+        android:padding="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="HEX:"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginEnd="8dp" />
+
+        <EditText
+            android:id="@+id/et_hex"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="#FF0000"
+            android:textSize="14sp"
+            android:textColor="#333333"
+            android:inputType="textCapCharacters"
+            android:maxLength="7"
+            android:background="@null"
+            android:padding="4dp" />
+
+        <TextView
+            android:id="@+id/tv_rgb"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="RGB(255, 0, 0)"
+            android:textSize="12sp"
+            android:textColor="#999999"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
+
+    <!-- Кнопки действий -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="24dp">
+
+        <Button
+            android:id="@+id/btn_cancel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Отмена"
+            android:textColor="#757575"
+            android:background="@android:color/transparent"
+            android:layout_marginEnd="12dp" />
+
+        <Button
+            android:id="@+id/btn_select"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Выбрать"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#2196F3" />
+    </LinearLayout>
+
+
+</LinearLayout>

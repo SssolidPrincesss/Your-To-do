@@ -3,6 +3,7 @@ package com.bountyapp.yourrtodo
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
@@ -106,23 +107,27 @@ class MainActivity : AppCompatActivity() {
 
         categoriesRecyclerView.layoutManager = LinearLayoutManager(this)
 
-        categoryAdapter = CategoryAdapter(
-            categories = fragmentHome.getCategories(),
-            onCategoryClick = { category ->
-                // 1. Выбираем категорию
-                fragmentHome.selectCategory(category.id)
-                // 2. Закрываем шторку после выбора
-                if (isDrawerOpen) {
-                    toggleDrawer()
+        // Создаем адаптер ТОЛЬКО если он еще не создан
+        if (!::categoryAdapter.isInitialized) {
+            categoryAdapter = CategoryAdapter(
+                categories = fragmentHome.getCategories(),
+                onCategoryClick = { category ->
+                    fragmentHome.selectCategory(category.id)
+                    if (isDrawerOpen) {
+                        toggleDrawer()
+                    }
+                },
+                onAddCategoryClick = {
+                    // Этот колбэк вызывается из адаптера при нажатии на кнопку
+                    // Ничего не делаем, так как enterAddingMode уже вызван в адаптере
+                },
+                onCreateCategory = { name, color ->
+                    fragmentHome.addCategory(name, color)
                 }
-            },
-            onAddCategoryClick = {
-                android.widget.Toast.makeText(this, "Добавить новую категорию", android.widget.Toast.LENGTH_SHORT).show()
-            }
-        )
-
-        categoriesRecyclerView.adapter = categoryAdapter
-        fragmentHome.setCategoryAdapter(categoryAdapter)
+            )
+            categoriesRecyclerView.adapter = categoryAdapter
+            fragmentHome.setCategoryAdapter(categoryAdapter)
+        }
     }
 
 
@@ -141,26 +146,16 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            // Обновляем адаптер перед открытием
-            categoryAdapter = CategoryAdapter(
-                categories = fragmentHome.getCategories(),
-                onCategoryClick = { category ->
-                    // Выбираем категорию и закрываем шторку
-                    fragmentHome.selectCategory(category.id)
-                    if (isDrawerOpen) {
-                        toggleDrawer()
-                    }
-                },
-                onAddCategoryClick = {
-                    android.widget.Toast.makeText(this, "Добавить новую категорию", android.widget.Toast.LENGTH_SHORT).show()
-                }
-            )
-            categoriesRecyclerView.adapter = categoryAdapter
-            fragmentHome.setCategoryAdapter(categoryAdapter)
+            // Только настраиваем, но не создаем адаптер заново
+            setupCategoriesRecyclerView()
+
+            // Обновляем данные в адаптере
+            if (::categoryAdapter.isInitialized) {
+                categoryAdapter.notifyDataSetChanged()
+            }
 
             sidePanel.isClickable = true
 
-            // Анимация открытия
             sidePanel.animate()
                 .translationX(openPosition)
                 .setDuration(300)
@@ -175,14 +170,18 @@ class MainActivity : AppCompatActivity() {
                 .alpha(0f)
                 .setDuration(150)
                 .withEndAction {
-                    drawerHandle.visibility = android.view.View.GONE
+                    drawerHandle.visibility = View.GONE
                 }
                 .start()
 
         } else {
+            // Выходим из режима добавления при закрытии шторки
+            if (::categoryAdapter.isInitialized) {
+                categoryAdapter.exitAddingMode()
+            }
+
             sidePanel.isClickable = false
 
-            // Анимация закрытия
             sidePanel.animate()
                 .translationX(closedPosition)
                 .setDuration(300)
@@ -193,7 +192,7 @@ class MainActivity : AppCompatActivity() {
                 .setDuration(300)
                 .start()
 
-            drawerHandle.visibility = android.view.View.VISIBLE
+            drawerHandle.visibility = View.VISIBLE
             drawerHandle.animate()
                 .alpha(1f)
                 .setDuration(150)
