@@ -12,13 +12,16 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bountyapp.yourrtodo.MainActivity
 import com.bountyapp.yourrtodo.R
 import com.bountyapp.yourrtodo.adapter.CategoryAdapter
 import com.bountyapp.yourrtodo.adapter.TaskAdapter
 import com.bountyapp.yourrtodo.model.Category
 import com.bountyapp.yourrtodo.model.Task
+import com.bountyapp.yourrtodo.viewmodel.CategoriesViewModel
 import java.util.*
 
 class FragmentHome : Fragment() {
@@ -35,13 +38,15 @@ class FragmentHome : Fragment() {
     private lateinit var fabAddTask: Button
     private lateinit var mainContent: RelativeLayout
 
+    // ViewModel - используем activityViewModels для общего доступа
+    private val categoriesViewModel: CategoriesViewModel by activityViewModels()
+
     // Данные
     private var isSearchMode = false
     private val tasks = mutableListOf<Task>()
     private val allTasks = mutableListOf<Task>()
-    private val categories = mutableListOf<Category>()
     private var currentCategoryId: String = "all"
-    private lateinit var categoryAdapter: CategoryAdapter
+    private var categoryAdapter: CategoryAdapter? = null
 
     private var lastButtonClickTime = 0L
     private val DOUBLE_CLICK_THRESHOLD = 300L
@@ -52,9 +57,28 @@ class FragmentHome : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_home, container, false)
         initViews(view)
-        setupData()
+
+        // Инициализируем данные ТОЛЬКО если список категорий пуст
+        if (categoriesViewModel.getCategoriesList().isEmpty()) {
+            setupDefaultCategories()
+        }
+
+        setupTasks()
         setupUI()
+        observeViewModel()
+
         return view
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // При возврате на фрагмент обновляем адаптер
+        refreshCategories()
+        // Обновляем текущую категорию
+        val currentCategory = categoriesViewModel.getCategoryById(currentCategoryId)
+        if (currentCategory != null) {
+            updateTopBar(currentCategory)
+        }
     }
 
     private fun initViews(view: View) {
@@ -69,19 +93,55 @@ class FragmentHome : Fragment() {
         mainContent = view.findViewById(R.id.main_content)
     }
 
-    private fun setupData() {
-        // Категории
-        categories.clear()
-        categories.addAll(listOf(
+    private fun setupDefaultCategories() {
+        val defaultCategories = listOf(
             Category(id = "all", name = "Все", color = "#2196F3", isSelected = true),
             Category(id = "work", name = "Работа", color = "#4CAF50", isSelected = false),
             Category(id = "personal", name = "Личное", color = "#FF9800", isSelected = false),
             Category(id = "study", name = "Учеба", color = "#9C27B0", isSelected = false),
             Category(id = "shopping", name = "Покупки", color = "#FF5722", isSelected = false)
-        ))
+        )
 
-        // Задачи
-        setupTasks()
+        defaultCategories.forEach { category ->
+            categoriesViewModel.addCategory(category.name, category.color)
+        }
+
+        // Выбираем категорию "Все"
+        categoriesViewModel.selectCategory("all")
+    }
+
+    private fun observeViewModel() {
+        // Наблюдаем за изменениями списка категорий
+        categoriesViewModel.categories.observe(viewLifecycleOwner) { categories ->
+            // Обновляем адаптер при изменении списка
+            categoryAdapter?.updateCategories(categories)
+
+            // Обновляем текущую категорию, если нужно
+            val currentCategory = categories.find { it.id == currentCategoryId }
+            if (currentCategory != null) {
+                updateTopBar(currentCategory)
+            } else if (categories.isNotEmpty()) {
+                // Если текущая категория не найдена (например, удалена), выбираем первую
+                categoriesViewModel.selectCategory(categories[0].id)
+            }
+        }
+
+        // Наблюдаем за изменениями выбранной категории
+        categoriesViewModel.selectedCategoryId.observe(viewLifecycleOwner) { categoryId ->
+            currentCategoryId = categoryId
+
+            // Обновляем топ бар
+            val category = categoriesViewModel.getCategoryById(categoryId)
+            if (category != null) {
+                updateTopBar(category)
+            }
+
+            // Обновляем список задач
+            rebuildTasksList()
+
+            // Обновляем выделение в адаптере категорий
+            categoryAdapter?.notifyDataSetChanged()
+        }
     }
 
     private fun setupTasks() {
@@ -183,14 +243,23 @@ class FragmentHome : Fragment() {
 
     private fun rebuildTasksList() {
         allTasks.clear()
-        val filteredTasks = if (currentCategoryId == "all") tasks else tasks.filter { it.categoryId == currentCategoryId }
 
+        // Фильтруем задачи по выбранной категории
+        val filteredTasks = if (currentCategoryId == "all") {
+            tasks
+        } else {
+            tasks.filter { it.categoryId == currentCategoryId }
+        }
+
+        // Сегодня (задачи без даты)
         allTasks.add(Task.createSectionHeader("Сегодня"))
         allTasks.addAll(filteredTasks.filter { it.dueDate == null && !it.isCompleted })
 
+        // В планах (задачи с датой)
         allTasks.add(Task.createSectionHeader("В планах"))
         allTasks.addAll(filteredTasks.filter { it.dueDate != null && !it.isCompleted })
 
+        // Выполнено
         allTasks.add(Task.createSectionHeader("Выполнено"))
         allTasks.addAll(filteredTasks.filter { it.isCompleted })
 
@@ -283,6 +352,22 @@ class FragmentHome : Fragment() {
         hideKeyboard()
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // Уведомляем активность, что фрагмент готов
+        (activity as? MainActivity)?.onFragmentReady()
+
+        // Принудительно обновляем категории
+        refreshCategories()
+
+        // Обновляем топ бар с текущей категорией
+        val currentCategory = categoriesViewModel.getCategoryById(currentCategoryId)
+        if (currentCategory != null) {
+            updateTopBar(currentCategory)
+        }
+    }
+
     private fun showKeyboard() {
         val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showSoftInput(searchEditText, InputMethodManager.SHOW_IMPLICIT)
@@ -294,17 +379,7 @@ class FragmentHome : Fragment() {
     }
 
     fun selectCategory(categoryId: String) {
-        currentCategoryId = categoryId
-        categories.forEach { it.isSelected = false }
-        categories.find { it.id == categoryId }?.isSelected = true
-
-        if (::categoryAdapter.isInitialized) {
-            categoryAdapter.notifyDataSetChanged()
-        }
-
-        val category = categories.find { it.id == categoryId } ?: categories[0]
-        updateTopBar(category)
-        rebuildTasksList()
+        categoriesViewModel.selectCategory(categoryId)
     }
 
     private fun updateTopBar(category: Category) {
@@ -313,30 +388,22 @@ class FragmentHome : Fragment() {
     }
 
     // Методы для связи с MainActivity
-    fun getCategories(): MutableList<Category> = categories
+    fun getCategories(): MutableList<Category> = categoriesViewModel.getCategoriesList()
 
     fun setCategoryAdapter(adapter: CategoryAdapter) {
         categoryAdapter = adapter
+        // Сразу обновляем адаптер текущими данными
+        categoryAdapter?.updateCategories(categoriesViewModel.getCategoriesList())
     }
 
     fun getCurrentCategoryId(): String = currentCategoryId
 
     fun addCategory(name: String, color: String) {
-        val newCategory = Category(
-            id = "category_${System.currentTimeMillis()}",
-            name = name,
-            color = color,
-            isSelected = false
-        )
-
-        // Добавляем в список
-        categories.add(newCategory)
-
-        // Обновляем адаптер
-        if (::categoryAdapter.isInitialized) {
-            categoryAdapter.notifyItemInserted(categories.size - 1)
-        }
-
+        categoriesViewModel.addCategory(name, color)
         Toast.makeText(requireContext(), "Категория '$name' добавлена", Toast.LENGTH_SHORT).show()
+    }
+
+    fun refreshCategories() {
+        categoryAdapter?.updateCategories(categoriesViewModel.getCategoriesList())
     }
 }

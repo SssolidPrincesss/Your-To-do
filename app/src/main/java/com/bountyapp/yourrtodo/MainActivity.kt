@@ -7,12 +7,15 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bountyapp.yourrtodo.adapter.CategoryAdapter
 import com.bountyapp.yourrtodo.fragments.FragmentAchievements
 import com.bountyapp.yourrtodo.fragments.FragmentCalendar
 import com.bountyapp.yourrtodo.fragments.FragmentHome
 import com.bountyapp.yourrtodo.fragments.FragmentSettings
+import com.bountyapp.yourrtodo.viewmodel.CategoriesViewModel
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
@@ -23,11 +26,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var collapseButton: LinearLayout
     private lateinit var bottomNavigation: BottomNavigationView
     private lateinit var mainContentContainer: LinearLayout
-    private lateinit var drawerHandle: LinearLayout // Добавляем ручку
+    private lateinit var drawerHandle: LinearLayout
 
     private lateinit var fragmentHome: FragmentHome
     private var isDrawerOpen = false
-    private lateinit var categoryAdapter: CategoryAdapter
+    private var categoryAdapter: CategoryAdapter? = null
+
+    // ViewModel
+    private lateinit var categoriesViewModel: CategoriesViewModel
 
     // Константы для размеров
     private companion object {
@@ -38,10 +44,14 @@ class MainActivity : AppCompatActivity() {
     private var closedPosition: Float = 0f
     private var openPosition: Float = 0f
     private var shiftAmount: Float = 0f
+    private var defaultMarginStart: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // Инициализация ViewModel
+        categoriesViewModel = ViewModelProvider(this)[CategoriesViewModel::class.java]
 
         // Инициализация UI элементов
         initViews()
@@ -52,52 +62,54 @@ class MainActivity : AppCompatActivity() {
         // Загружаем главный фрагмент
         fragmentHome = FragmentHome()
         loadFragment(fragmentHome)
+
+        // Наблюдаем за изменениями в ViewModel
+        observeViewModel()
+    }
+
+    private fun observeViewModel() {
+        categoriesViewModel.categories.observe(this) { categories ->
+            // Когда категории обновляются в ViewModel, обновляем адаптер
+            if (::fragmentHome.isInitialized && categoryAdapter != null) {
+                categoryAdapter?.updateCategories(categories)
+                fragmentHome.refreshCategories()
+            }
+        }
     }
 
     private fun initViews() {
-        // Находим элементы через findViewById
         sidePanel = findViewById(R.id.side_panel)
         categoriesRecyclerView = findViewById(R.id.categories_recycler_view)
         collapseButton = findViewById(R.id.collapse_button)
         bottomNavigation = findViewById(R.id.bottom_navigation)
         mainContentContainer = findViewById(R.id.main_content_container)
-        drawerHandle = findViewById(R.id.drawer_handle) // Находим ручку
+        drawerHandle = findViewById(R.id.drawer_handle)
 
-        // Вычисляем позиции с учетом плотности экрана
         val density = resources.displayMetrics.density
-
-        // Шторка изначально видна на 32dp (ручка)
-        closedPosition = -(DRAWER_WIDTH_DP - VISIBLE_HANDLE_WIDTH_DP) * density  // -288dp
-
-        // Когда открыта - полностью видна
+        closedPosition = -(DRAWER_WIDTH_DP - VISIBLE_HANDLE_WIDTH_DP) * density
         openPosition = 0f
+        shiftAmount = (DRAWER_WIDTH_DP - VISIBLE_HANDLE_WIDTH_DP) * density
 
-        // Контент сдвигается на ширину шторки минус ручка
-        shiftAmount = (DRAWER_WIDTH_DP - VISIBLE_HANDLE_WIDTH_DP) * density  // 288dp
+        // Сохраняем исходный отступ
+        defaultMarginStart = (mainContentContainer.layoutParams as FrameLayout.LayoutParams).marginStart
 
-        // Гарантируем начальное состояние
         sidePanel.post {
-            sidePanel.translationX = closedPosition  // Видно только 32dp ручки
+            sidePanel.translationX = closedPosition
             sidePanel.isClickable = false
-            drawerHandle.visibility = android.view.View.VISIBLE // Ручка видна
+            drawerHandle.visibility = View.VISIBLE
         }
 
         setupDrawer()
     }
 
     private fun setupDrawer() {
-        // 1. Обработка клика по кнопке "Свернуть" ВНУТРИ шторки
         collapseButton.setOnClickListener {
             toggleDrawer()
         }
 
-        // 2. Обработка клика по РУЧКЕ шторки (сама полоска 32dp)
         drawerHandle.setOnClickListener {
             toggleDrawer()
         }
-
-        // Настройка RecyclerView для категорий
-        setupCategoriesRecyclerView()
     }
 
     private fun setupCategoriesRecyclerView() {
@@ -107,32 +119,34 @@ class MainActivity : AppCompatActivity() {
 
         categoriesRecyclerView.layoutManager = LinearLayoutManager(this)
 
-        // Создаем адаптер ТОЛЬКО если он еще не создан
-        if (!::categoryAdapter.isInitialized) {
+        val currentCategories = fragmentHome.getCategories()
+
+        if (categoryAdapter == null) {
             categoryAdapter = CategoryAdapter(
-                categories = fragmentHome.getCategories(),
+                categories = currentCategories,
                 onCategoryClick = { category ->
                     fragmentHome.selectCategory(category.id)
                     if (isDrawerOpen) {
-                        toggleDrawer()
+                        updateDrawerState(false)
                     }
                 },
                 onAddCategoryClick = {
-                    // Этот колбэк вызывается из адаптера при нажатии на кнопку
-                    // Ничего не делаем, так как enterAddingMode уже вызван в адаптере
+                    // Ничего не делаем
                 },
                 onCreateCategory = { name, color ->
                     fragmentHome.addCategory(name, color)
                 }
             )
             categoriesRecyclerView.adapter = categoryAdapter
-            fragmentHome.setCategoryAdapter(categoryAdapter)
+            fragmentHome.setCategoryAdapter(categoryAdapter!!)
+        } else {
+            categoryAdapter?.updateCategories(currentCategories)
+            fragmentHome.setCategoryAdapter(categoryAdapter!!)
         }
     }
 
-
     private fun toggleDrawer() {
-        // Проверяем, что мы на главной вкладке
+        // Разрешаем открывать/закрывать только на главной
         if (bottomNavigation.selectedItemId == R.id.nav_home) {
             updateDrawerState(!isDrawerOpen)
         }
@@ -146,13 +160,7 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            // Только настраиваем, но не создаем адаптер заново
             setupCategoriesRecyclerView()
-
-            // Обновляем данные в адаптере
-            if (::categoryAdapter.isInitialized) {
-                categoryAdapter.notifyDataSetChanged()
-            }
 
             sidePanel.isClickable = true
 
@@ -175,21 +183,24 @@ class MainActivity : AppCompatActivity() {
                 .start()
 
         } else {
-            // Выходим из режима добавления при закрытии шторки
-            if (::categoryAdapter.isInitialized) {
-                categoryAdapter.exitAddingMode()
-            }
+            categoryAdapter?.exitAddingMode()
 
             sidePanel.isClickable = false
 
             sidePanel.animate()
                 .translationX(closedPosition)
                 .setDuration(300)
+                .withEndAction {
+                    sidePanel.translationX = closedPosition
+                }
                 .start()
 
             mainContentContainer.animate()
                 .translationX(0f)
                 .setDuration(300)
+                .withEndAction {
+                    mainContentContainer.translationX = 0f
+                }
                 .start()
 
             drawerHandle.visibility = View.VISIBLE
@@ -204,25 +215,31 @@ class MainActivity : AppCompatActivity() {
         bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> {
-                    // Показываем шторку на главной вкладке
+                    // Показываем шторку (в закрытом состоянии)
                     showDrawer()
-                    loadFragment(FragmentHome())
+
+                    // Загружаем или показываем главный фрагмент
+                    val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
+                    if (currentFragment !is FragmentHome) {
+                        fragmentHome = FragmentHome()
+                        loadFragment(fragmentHome)
+                    }
                     true
                 }
                 R.id.nav_calendar -> {
-                    // Скрываем шторку на других вкладках
+                    // Скрываем шторку полностью
                     hideDrawer()
                     loadFragment(FragmentCalendar())
                     true
                 }
                 R.id.nav_achievements -> {
-                    // Скрываем шторку на других вкладках
+                    // Скрываем шторку полностью
                     hideDrawer()
                     loadFragment(FragmentAchievements())
                     true
                 }
                 R.id.nav_settings -> {
-                    // Скрываем шторку на других вкладках
+                    // Скрываем шторку полностью
                     hideDrawer()
                     loadFragment(FragmentSettings())
                     true
@@ -231,69 +248,83 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Устанавливаем начальный выбранный элемент
         bottomNavigation.selectedItemId = R.id.nav_home
     }
+
     private fun showDrawer() {
         // Показываем шторку и ручку
-        sidePanel.visibility = android.view.View.VISIBLE
-        drawerHandle.visibility = android.view.View.VISIBLE
+        sidePanel.visibility = View.VISIBLE
+        drawerHandle.visibility = View.VISIBLE
 
-        // Возвращаем отступ для контента
-        val density = resources.displayMetrics.density
-        mainContentContainer.translationX = 0f
-        mainContentContainer.layoutParams = (mainContentContainer.layoutParams as FrameLayout.LayoutParams).apply {
-            marginStart = (32 * density).toInt() // 32dp отступ
-        }
-        mainContentContainer.requestLayout()
-
-        // Сбрасываем состояние шторки
+        // Устанавливаем правильные позиции
         sidePanel.translationX = closedPosition
         sidePanel.isClickable = false
         isDrawerOpen = false
+
+        // Восстанавливаем отступ для контента
+        mainContentContainer.translationX = 0f
+        val params = mainContentContainer.layoutParams as FrameLayout.LayoutParams
+        val density = resources.displayMetrics.density
+        params.marginStart = (32 * density).toInt()
+        mainContentContainer.layoutParams = params
     }
 
     private fun hideDrawer() {
-        // Скрываем шторку и ручку
-        sidePanel.visibility = android.view.View.GONE
-        drawerHandle.visibility = android.view.View.GONE
+        // Полностью скрываем шторку и ручку
+        sidePanel.visibility = View.GONE
+        drawerHandle.visibility = View.GONE
 
-        // Убираем отступ у контента (растягиваем на весь экран)
+        // Убираем отступ у контента - ВАЖНО: устанавливаем translationX и marginStart в 0
         mainContentContainer.translationX = 0f
-        mainContentContainer.layoutParams = (mainContentContainer.layoutParams as FrameLayout.LayoutParams).apply {
-            marginStart = 0 // убираем отступ
-        }
+        val params = mainContentContainer.layoutParams as FrameLayout.LayoutParams
+        params.marginStart = 0
+        mainContentContainer.layoutParams = params
+
+        // Принудительно запрашиваем перерисовку
         mainContentContainer.requestLayout()
 
         // Сбрасываем состояние
         sidePanel.isClickable = false
         isDrawerOpen = false
     }
-    private fun loadFragment(fragment: androidx.fragment.app.Fragment) {
+
+    private fun loadFragment(fragment: Fragment) {
         if (fragment is FragmentHome) {
             fragmentHome = fragment
-            // Обновляем адаптер категорий при переключении на главный экран
-            Handler(Looper.getMainLooper()).postDelayed({
-                setupCategoriesRecyclerView()
-            }, 100)
-        }
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .commitAllowingStateLoss()
 
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container, fragment)
-            .commit()
+            Handler(Looper.getMainLooper()).postDelayed({
+                if (::fragmentHome.isInitialized) {
+                    setupCategoriesRecyclerView()
+                }
+            }, 200)
+        } else {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .commit()
+        }
     }
 
-    // Обновляем toggleDrawer чтобы он работал только на главной
-
-
     override fun onBackPressed() {
-        if (bottomNavigation.selectedItemId == R.id.nav_home && isDrawerOpen) {
-            toggleDrawer()
-        } else if (bottomNavigation.selectedItemId != R.id.nav_home) {
-            // Если не на главной, переходим на главную
-            bottomNavigation.selectedItemId = R.id.nav_home
+        if (bottomNavigation.selectedItemId == R.id.nav_home) {
+            if (isDrawerOpen) {
+                updateDrawerState(false)
+            } else {
+                super.onBackPressed()
+            }
         } else {
-            super.onBackPressed()
+            bottomNavigation.selectedItemId = R.id.nav_home
         }
+    }
+
+    fun onFragmentReady() {
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (::fragmentHome.isInitialized && categoryAdapter != null) {
+                categoryAdapter?.updateCategories(fragmentHome.getCategories())
+                fragmentHome.refreshCategories()
+            }
+        }, 100)
     }
 }

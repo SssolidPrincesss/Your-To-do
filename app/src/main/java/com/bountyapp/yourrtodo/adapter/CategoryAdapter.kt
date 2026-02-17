@@ -19,7 +19,7 @@ import com.bountyapp.yourrtodo.model.Category
 import com.bountyapp.yourrtodo.model.ColorOption
 
 class CategoryAdapter(
-    private val categories: List<Category>,
+    private var categories: List<Category>,
     private val onCategoryClick: (Category) -> Unit,
     private val onAddCategoryClick: () -> Unit,
     private val onCreateCategory: (String, String) -> Unit
@@ -243,5 +243,10 @@ class CategoryAdapter(
 
             itemView.setOnClickListener { onCategoryClick(category) }
         }
+
+    }
+    fun updateCategories(newCategories: MutableList<Category>) {
+        categories = newCategories
+        notifyDataSetChanged()
     }
 }
