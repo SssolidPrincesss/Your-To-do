@@ -1,6 +1,8 @@
 package com.bountyapp.yourrtodo.fragments
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
@@ -11,18 +13,24 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bountyapp.yourrtodo.MainActivity
 import com.bountyapp.yourrtodo.R
+import com.bountyapp.yourrtodo.TaskActivity
 import com.bountyapp.yourrtodo.adapter.CategoryAdapter
 import com.bountyapp.yourrtodo.adapter.TaskAdapter
 import com.bountyapp.yourrtodo.model.Category
 import com.bountyapp.yourrtodo.model.Task
 import com.bountyapp.yourrtodo.viewmodel.CategoriesViewModel
-import java.util.*
+import com.bountyapp.yourrtodo.viewmodel.TasksViewModel
+import kotlinx.coroutines.launch
 
 class FragmentHome : Fragment() {
 
@@ -40,16 +48,28 @@ class FragmentHome : Fragment() {
 
     // ViewModel - используем activityViewModels для общего доступа
     private val categoriesViewModel: CategoriesViewModel by activityViewModels()
+    private val tasksViewModel: TasksViewModel by activityViewModels() // Добавляем ViewModel для задач
 
     // Данные
     private var isSearchMode = false
-    private val tasks = mutableListOf<Task>()
-    private val allTasks = mutableListOf<Task>()
     private var currentCategoryId: String = "all"
     private var categoryAdapter: CategoryAdapter? = null
 
     private var lastButtonClickTime = 0L
     private val DOUBLE_CLICK_THRESHOLD = 300L
+
+    // Регистрируем контракт для получения результата из TaskActivity
+    private val taskResultLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getParcelableExtra<Task>(TaskActivity.EXTRA_TASK)?.let { updatedTask ->
+                // Обновляем задачу в ViewModel
+                tasksViewModel.updateTask(updatedTask)
+                Toast.makeText(requireContext(), "Задача обновлена", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -63,9 +83,8 @@ class FragmentHome : Fragment() {
             setupDefaultCategories()
         }
 
-        setupTasks()
         setupUI()
-        observeViewModel()
+        observeViewModels()
 
         return view
     }
@@ -110,7 +129,7 @@ class FragmentHome : Fragment() {
         categoriesViewModel.selectCategory("all")
     }
 
-    private fun observeViewModel() {
+    private fun observeViewModels() {
         // Наблюдаем за изменениями списка категорий
         categoriesViewModel.categories.observe(viewLifecycleOwner) { categories ->
             // Обновляем адаптер при изменении списка
@@ -136,84 +155,15 @@ class FragmentHome : Fragment() {
                 updateTopBar(category)
             }
 
-            // Обновляем список задач
+            // Обновляем список задач при смене категории
             rebuildTasksList()
-
-            // Обновляем выделение в адаптере категорий
-            categoryAdapter?.notifyDataSetChanged()
         }
-    }
 
-    private fun setupTasks() {
-        tasks.clear()
-        tasks.addAll(listOf(
-            Task(
-                id = "1",
-                title = "Создать годовой отчет",
-                dueDate = null,
-                isCompleted = false,
-                isOverdue = false,
-                hasReminder = true,
-                isRecurring = false,
-                hasSubtasks = true,
-                flagColor = "#FFC107",
-                categoryId = "work"
-            ),
-            Task(
-                id = "2",
-                title = "Проверить почту",
-                dueDate = null,
-                isCompleted = false,
-                isOverdue = false,
-                hasReminder = false,
-                isRecurring = true,
-                hasSubtasks = false,
-                flagColor = "#4CAF50",
-                categoryId = "work"
-            ),
-            Task(
-                id = "3",
-                title = "Купить продукты",
-                dueDate = Calendar.getInstance().apply {
-                    add(Calendar.DAY_OF_MONTH, 1)
-                }.time,
-                isCompleted = false,
-                isOverdue = false,
-                hasReminder = true,
-                isRecurring = false,
-                hasSubtasks = false,
-                flagColor = "#2196F3",
-                categoryId = "shopping"
-            ),
-            Task(
-                id = "4",
-                title = "Сделать домашнее задание",
-                dueDate = Calendar.getInstance().apply {
-                    add(Calendar.DAY_OF_MONTH, 3)
-                }.time,
-                isCompleted = false,
-                isOverdue = false,
-                hasReminder = false,
-                isRecurring = false,
-                hasSubtasks = true,
-                flagColor = "#9C27B0",
-                categoryId = "study"
-            ),
-            Task(
-                id = "5",
-                title = "Позвонить родителям",
-                dueDate = Calendar.getInstance().apply {
-                    add(Calendar.DAY_OF_MONTH, -1)
-                }.time,
-                isCompleted = true,
-                isOverdue = false,
-                hasReminder = false,
-                isRecurring = false,
-                hasSubtasks = false,
-                flagColor = "#FF9800",
-                categoryId = "personal"
-            )
-        ))
+        // Наблюдаем за изменениями списка задач
+        tasksViewModel.tasks.observe(viewLifecycleOwner) { tasks ->
+            // Перестраиваем список при изменении задач
+            rebuildTasksList()
+        }
     }
 
     private fun setupUI() {
@@ -232,56 +182,58 @@ class FragmentHome : Fragment() {
 
     private fun setupRecyclerView() {
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        rebuildTasksList()
+
+        // Создаем адаптер с лямбдой для клика
         taskAdapter = TaskAdapter(
             context = requireContext(),
-            originalTasks = allTasks,
-            onTaskChecked = ::handleTaskCompletion
+            originalTasks = emptyList(), // Начальный пустой список, обновится в rebuildTasksList
+            onTaskChecked = ::handleTaskCompletion,
+            onTaskClick = { task -> openTask(task) }
         )
         recyclerView.adapter = taskAdapter
+
+        // Первоначальное построение списка
+        rebuildTasksList()
+    }
+
+    private fun openTask(task: Task) {
+        val intent = Intent(requireContext(), TaskActivity::class.java)
+        intent.putExtra(TaskActivity.EXTRA_TASK, task)
+        taskResultLauncher.launch(intent)
     }
 
     private fun rebuildTasksList() {
-        allTasks.clear()
+        // Получаем актуальные задачи из ViewModel
+        val allTasks = tasksViewModel.getTasksByCategory(currentCategoryId)
 
-        // Фильтруем задачи по выбранной категории
-        val filteredTasks = if (currentCategoryId == "all") {
-            tasks
-        } else {
-            tasks.filter { it.categoryId == currentCategoryId }
-        }
+        val sectionedTasks = mutableListOf<Task>()
 
         // Сегодня (задачи без даты)
-        allTasks.add(Task.createSectionHeader("Сегодня"))
-        allTasks.addAll(filteredTasks.filter { it.dueDate == null && !it.isCompleted })
+        sectionedTasks.add(Task.createSectionHeader("Сегодня"))
+        sectionedTasks.addAll(allTasks.filter { it.dueDate == null && !it.isCompleted })
 
         // В планах (задачи с датой)
-        allTasks.add(Task.createSectionHeader("В планах"))
-        allTasks.addAll(filteredTasks.filter { it.dueDate != null && !it.isCompleted })
+        sectionedTasks.add(Task.createSectionHeader("В планах"))
+        sectionedTasks.addAll(allTasks.filter { it.dueDate != null && !it.isCompleted })
 
         // Выполнено
-        allTasks.add(Task.createSectionHeader("Выполнено"))
-        allTasks.addAll(filteredTasks.filter { it.isCompleted })
+        sectionedTasks.add(Task.createSectionHeader("Выполнено"))
+        sectionedTasks.addAll(allTasks.filter { it.isCompleted })
 
         if (::taskAdapter.isInitialized) {
-            taskAdapter.updateOriginalTasks(allTasks)
+            taskAdapter.updateOriginalTasks(sectionedTasks)
         }
     }
 
     private fun handleTaskCompletion(task: Task) {
-        val index = tasks.indexOfFirst { it.id == task.id }
-        if (index != -1) {
-            val isNowCompleted = !tasks[index].isCompleted
-            tasks[index] = tasks[index].copy(isCompleted = isNowCompleted)
-            rebuildTasksList()
+        // Используем ViewModel для изменения статуса задачи
+        tasksViewModel.toggleTaskCompletion(task.id)?.let { updatedTask ->
+            val message = if (updatedTask.isCompleted)
+                "Задача выполнена: ${updatedTask.title}"
+            else
+                "Задача возвращена в работу: ${updatedTask.title}"
 
-            if (isNowCompleted) {
-                Toast.makeText(
-                    requireContext(),
-                    "Задача выполнена: ${tasks[index].title}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
     }
 

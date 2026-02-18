@@ -17,7 +17,7 @@ import com.bountyapp.yourrtodo.fragments.FragmentHome
 import com.bountyapp.yourrtodo.fragments.FragmentSettings
 import com.bountyapp.yourrtodo.viewmodel.CategoriesViewModel
 import com.google.android.material.bottomnavigation.BottomNavigationView
-
+import com.bountyapp.yourrtodo.viewmodel.TasksViewModel
 class MainActivity : AppCompatActivity() {
 
     // UI элементы
@@ -34,6 +34,7 @@ class MainActivity : AppCompatActivity() {
 
     // ViewModel
     private lateinit var categoriesViewModel: CategoriesViewModel
+    private lateinit var tasksViewModel: TasksViewModel
 
     // Константы для размеров
     private companion object {
@@ -53,6 +54,7 @@ class MainActivity : AppCompatActivity() {
         // Инициализация ViewModel
         categoriesViewModel = ViewModelProvider(this)[CategoriesViewModel::class.java]
 
+        tasksViewModel = ViewModelProvider(this)[TasksViewModel::class.java]
         // Инициализация UI элементов
         initViews()
 

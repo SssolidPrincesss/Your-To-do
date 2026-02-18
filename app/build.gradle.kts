@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.ksp)
+    alias(libs.plugins.kotlin.parcelize)
 }
 
 android {
@@ -36,11 +37,13 @@ android {
     }
     buildFeatures {
         compose = false
+        viewBinding = true
     }
 
 }
 
 dependencies {
+
     // ========== ОСНОВНЫЕ БИБЛИОТЕКИ ==========
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.core:core-ktx:1.12.0")
@@ -48,7 +51,7 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.6.1")
 
     // ========== ДЛЯ ИНТЕРФЕЙСА ==========
-    implementation("com.google.android.material:material:1.6.0")
+    implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.drawerlayout:drawerlayout:1.2.0")
     implementation("androidx.coordinatorlayout:coordinatorlayout:1.3.0")
     implementation("androidx.recyclerview:recyclerview:1.3.1")

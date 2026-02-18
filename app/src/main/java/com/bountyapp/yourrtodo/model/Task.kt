@@ -1,29 +1,36 @@
 package com.bountyapp.yourrtodo.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import java.text.SimpleDateFormat
 import java.util.*
 
+@Parcelize
 data class Task(
     val id: String,
-    val title: String,
-    val dueDate: Date?, // null = сегодня
-    var isCompleted: Boolean,
+    var title: String,
+    var dueDate: Date? = null,
+    var isCompleted: Boolean = false,
     val isOverdue: Boolean = false,
-    val hasReminder: Boolean = false,
-    val isRecurring: Boolean = false,
-    val hasSubtasks: Boolean = false,
+    var hasReminder: Boolean = false,
+    var isRecurring: Boolean = false,
+    var hasSubtasks: Boolean = false,
     val flagColor: String = "#FFC107",
-    val categoryId: String = "all", // Добавляем привязку к категории
+    var categoryId: String = "all",
     val isSectionHeader: Boolean = false,
-    val sectionTitle: String? = null
-) {
+    val sectionTitle: String? = null,
+    var notes: String? = null,
+    var reminderTime: Date? = null,
+    var recurrenceRule: String? = null,
+    val attachments: List<String> = emptyList(),
+    var subtasks: MutableList<Subtask> = mutableListOf()
+) : Parcelable {
+
     companion object {
         fun createSectionHeader(title: String): Task {
             return Task(
                 id = "section_$title",
                 title = title,
-                dueDate = null,
-                isCompleted = false,
                 isSectionHeader = true,
                 sectionTitle = title
             )
@@ -32,7 +39,7 @@ data class Task(
 
     fun getDisplayDate(): String {
         if (isSectionHeader) return ""
-        if (dueDate == null) return "" // Сегодня - без даты
+        if (dueDate == null) return ""
 
         val today = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0) }
         val taskDate = Calendar.getInstance().apply {
@@ -43,7 +50,7 @@ data class Task(
         return when {
             isSameDay(today, taskDate) -> "Сегодня"
             isTomorrow(today, taskDate) -> "Завтра"
-            else -> SimpleDateFormat("dd.MM", Locale.getDefault()).format(dueDate)
+            else -> SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(dueDate)
         }
     }
 
@@ -67,23 +74,20 @@ data class Task(
         return points
     }
 
-    // Метод copy должен быть аккуратен с isCompleted
     fun copy(
-        isCompleted: Boolean = this.isCompleted
+        isCompleted: Boolean = this.isCompleted,
+        dueDate: Date? = this.dueDate,
+        hasReminder: Boolean = this.hasReminder,
+        isRecurring: Boolean = this.isRecurring,
+        notes: String? = this.notes,
+        reminderTime: Date? = this.reminderTime,
+        recurrenceRule: String? = this.recurrenceRule,
+        subtasks: MutableList<Subtask> = this.subtasks
     ): Task {
         return Task(
-            id,
-            title,
-            dueDate,
-            isCompleted, // <-- Ключевое поле
-            isOverdue,
-            hasReminder,
-            isRecurring,
-            hasSubtasks,
-            flagColor,
-            categoryId,
-            isSectionHeader,
-            sectionTitle
+            id, title, dueDate, isCompleted, isOverdue, hasReminder, isRecurring,
+            hasSubtasks, flagColor, categoryId, isSectionHeader, sectionTitle,
+            notes, reminderTime, recurrenceRule, attachments, subtasks
         )
     }
 }

@@ -13,7 +13,8 @@ import com.bountyapp.yourrtodo.model.Task
 class TaskAdapter(
     private val context: Context,
     private var originalTasks: List<Task>,
-    private val onTaskChecked: (Task) -> Unit
+    private val onTaskChecked: (Task) -> Unit,
+    private val onTaskClick: (Task) -> Unit // Добавляем лямбду для клика по задаче
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private var filteredTasks = originalTasks.toMutableList()
@@ -196,8 +197,8 @@ class TaskAdapter(
                 val position = adapterPosition
                 if (position != RecyclerView.NO_POSITION && !filteredTasks[position].isSectionHeader) {
                     val task = filteredTasks[position]
-                    // TODO: Здесь будет переход в активити деталей задачи
-                    Toast.makeText(context, "Открыть задачу: ${task.title}", Toast.LENGTH_SHORT).show()
+                    // Просто вызываем лямбду, не пытаемся найти Fragment
+                    onTaskClick(task)
                 }
             }
         }
