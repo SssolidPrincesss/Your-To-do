@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,6 +31,7 @@ import com.bountyapp.yourrtodo.model.Category
 import com.bountyapp.yourrtodo.model.Task
 import com.bountyapp.yourrtodo.viewmodel.CategoriesViewModel
 import com.bountyapp.yourrtodo.viewmodel.TasksViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class FragmentHome : Fragment() {
@@ -46,9 +48,9 @@ class FragmentHome : Fragment() {
     private lateinit var fabAddTask: Button
     private lateinit var mainContent: RelativeLayout
 
-    // ViewModel - используем activityViewModels для общего доступа
+    // ViewModel
     private val categoriesViewModel: CategoriesViewModel by activityViewModels()
-    private val tasksViewModel: TasksViewModel by activityViewModels() // Добавляем ViewModel для задач
+    private val tasksViewModel: TasksViewModel by activityViewModels()
 
     // Данные
     private var isSearchMode = false
@@ -58,18 +60,33 @@ class FragmentHome : Fragment() {
     private var lastButtonClickTime = 0L
     private val DOUBLE_CLICK_THRESHOLD = 300L
 
+
+    private var isReturningFromTask = false
+
     // Регистрируем контракт для получения результата из TaskActivity
     private val taskResultLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
+        // СНАЧАЛА устанавливаем флаг, потом обрабатываем результат
+        isReturningFromTask = true
+        Log.d("FragmentHome", "Returning from TaskActivity, setting flag to true")
+
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.getParcelableExtra<Task>(TaskActivity.EXTRA_TASK)?.let { updatedTask ->
-                // Обновляем задачу в ViewModel
                 tasksViewModel.updateTask(updatedTask)
                 Toast.makeText(requireContext(), "Задача обновлена", Toast.LENGTH_SHORT).show()
             }
         }
+
+        // НЕ сбрасываем флаг сразу, дадим время на обработку обновлений
+        viewLifecycleOwner.lifecycleScope.launch {
+            // Ждем немного, чтобы все обновления успели обработаться
+            delay(1000)
+            isReturningFromTask = false
+            Log.d("FragmentHome", "Resetting return flag")
+        }
     }
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -77,22 +94,26 @@ class FragmentHome : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_home, container, false)
         initViews(view)
-
-        // Инициализируем данные ТОЛЬКО если список категорий пуст
-        if (categoriesViewModel.getCategoriesList().isEmpty()) {
-            setupDefaultCategories()
-        }
-
         setupUI()
+        return view
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // Всегда регистрируем наблюдатели в onViewCreated, но с проверкой жизненного цикла
+        Log.d("FragmentHome", "Setting up observers in onViewCreated")
         observeViewModels()
 
-        return view
+        // Уведомляем активность, что фрагмент готов
+        lifecycleScope.launch {
+            delay(100)
+            (activity as? MainActivity)?.onFragmentReady()
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        // При возврате на фрагмент обновляем адаптер
-        refreshCategories()
         // Обновляем текущую категорию
         val currentCategory = categoriesViewModel.getCategoryById(currentCategoryId)
         if (currentCategory != null) {
@@ -112,59 +133,38 @@ class FragmentHome : Fragment() {
         mainContent = view.findViewById(R.id.main_content)
     }
 
-    private fun setupDefaultCategories() {
-        val defaultCategories = listOf(
-            Category(id = "all", name = "Все", color = "#2196F3", isSelected = true),
-            Category(id = "work", name = "Работа", color = "#4CAF50", isSelected = false),
-            Category(id = "personal", name = "Личное", color = "#FF9800", isSelected = false),
-            Category(id = "study", name = "Учеба", color = "#9C27B0", isSelected = false),
-            Category(id = "shopping", name = "Покупки", color = "#FF5722", isSelected = false)
-        )
-
-        defaultCategories.forEach { category ->
-            categoriesViewModel.addCategory(category.name, category.color)
-        }
-
-        // Выбираем категорию "Все"
-        categoriesViewModel.selectCategory("all")
-    }
-
     private fun observeViewModels() {
-        // Наблюдаем за изменениями списка категорий
         categoriesViewModel.categories.observe(viewLifecycleOwner) { categories ->
-            // Обновляем адаптер при изменении списка
-            categoryAdapter?.updateCategories(categories)
+            Log.d("FragmentHome", "Categories updated: ${categories.size}")
 
-            // Обновляем текущую категорию, если нужно
-            val currentCategory = categories.find { it.id == currentCategoryId }
-            if (currentCategory != null) {
-                updateTopBar(currentCategory)
-            } else if (categories.isNotEmpty()) {
-                // Если текущая категория не найдена (например, удалена), выбираем первую
-                categoriesViewModel.selectCategory(categories[0].id)
+            val sortedCategories = categories.sortedWith(
+                compareBy<Category> {
+                    when (it.id) {
+                        "all" -> 0
+                        else -> 1
+                    }
+                }.thenBy { it.name }
+            )
+
+            categoryAdapter?.updateCategories(sortedCategories)
+
+            val selectedCategory = sortedCategories.find { it.isSelected }
+            if (selectedCategory != null) {
+                if (currentCategoryId != selectedCategory.id) {
+                    Log.d("FragmentHome", "Selected category changed to: ${selectedCategory.id}")
+                    currentCategoryId = selectedCategory.id
+                    updateTopBar(selectedCategory)
+                    rebuildTasksList()
+                }
             }
         }
 
-        // Наблюдаем за изменениями выбранной категории
-        categoriesViewModel.selectedCategoryId.observe(viewLifecycleOwner) { categoryId ->
-            currentCategoryId = categoryId
-
-            // Обновляем топ бар
-            val category = categoriesViewModel.getCategoryById(categoryId)
-            if (category != null) {
-                updateTopBar(category)
-            }
-
-            // Обновляем список задач при смене категории
-            rebuildTasksList()
-        }
-
-        // Наблюдаем за изменениями списка задач
-        tasksViewModel.tasks.observe(viewLifecycleOwner) { tasks ->
-            // Перестраиваем список при изменении задач
+        tasksViewModel.tasks.observe(viewLifecycleOwner) { taskList ->
+            Log.d("FragmentHome", "Tasks updated: ${taskList.size}")
             rebuildTasksList()
         }
     }
+
 
     private fun setupUI() {
         setupTopBarTransparency()
@@ -183,17 +183,13 @@ class FragmentHome : Fragment() {
     private fun setupRecyclerView() {
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
-        // Создаем адаптер с лямбдой для клика
         taskAdapter = TaskAdapter(
             context = requireContext(),
-            originalTasks = emptyList(), // Начальный пустой список, обновится в rebuildTasksList
+            originalTasks = emptyList(),
             onTaskChecked = ::handleTaskCompletion,
             onTaskClick = { task -> openTask(task) }
         )
         recyclerView.adapter = taskAdapter
-
-        // Первоначальное построение списка
-        rebuildTasksList()
     }
 
     private fun openTask(task: Task) {
@@ -203,37 +199,30 @@ class FragmentHome : Fragment() {
     }
 
     private fun rebuildTasksList() {
-        // Получаем актуальные задачи из ViewModel
+        Log.d("FragmentHome", "Rebuilding tasks for category: $currentCategoryId")
+
         val allTasks = tasksViewModel.getTasksByCategory(currentCategoryId)
+        Log.d("FragmentHome", "Found ${allTasks.size} tasks")
 
         val sectionedTasks = mutableListOf<Task>()
 
         // Сегодня (задачи без даты)
         sectionedTasks.add(Task.createSectionHeader("Сегодня"))
-        sectionedTasks.addAll(allTasks.filter { it.dueDate == null && !it.isCompleted })
+        val todayTasks = allTasks.filter { it.dueDate == null && !it.isCompleted }
+        sectionedTasks.addAll(todayTasks)
 
         // В планах (задачи с датой)
         sectionedTasks.add(Task.createSectionHeader("В планах"))
-        sectionedTasks.addAll(allTasks.filter { it.dueDate != null && !it.isCompleted })
+        val plannedTasks = allTasks.filter { it.dueDate != null && !it.isCompleted }
+        sectionedTasks.addAll(plannedTasks)
 
         // Выполнено
         sectionedTasks.add(Task.createSectionHeader("Выполнено"))
-        sectionedTasks.addAll(allTasks.filter { it.isCompleted })
+        val completedTasks = allTasks.filter { it.isCompleted }
+        sectionedTasks.addAll(completedTasks)
 
         if (::taskAdapter.isInitialized) {
             taskAdapter.updateOriginalTasks(sectionedTasks)
-        }
-    }
-
-    private fun handleTaskCompletion(task: Task) {
-        // Используем ViewModel для изменения статуса задачи
-        tasksViewModel.toggleTaskCompletion(task.id)?.let { updatedTask ->
-            val message = if (updatedTask.isCompleted)
-                "Задача выполнена: ${updatedTask.title}"
-            else
-                "Задача возвращена в работу: ${updatedTask.title}"
-
-            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -304,22 +293,6 @@ class FragmentHome : Fragment() {
         hideKeyboard()
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        // Уведомляем активность, что фрагмент готов
-        (activity as? MainActivity)?.onFragmentReady()
-
-        // Принудительно обновляем категории
-        refreshCategories()
-
-        // Обновляем топ бар с текущей категорией
-        val currentCategory = categoriesViewModel.getCategoryById(currentCategoryId)
-        if (currentCategory != null) {
-            updateTopBar(currentCategory)
-        }
-    }
-
     private fun showKeyboard() {
         val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showSoftInput(searchEditText, InputMethodManager.SHOW_IMPLICIT)
@@ -330,7 +303,13 @@ class FragmentHome : Fragment() {
         imm.hideSoftInputFromWindow(searchEditText.windowToken, 0)
     }
 
+    private fun handleTaskCompletion(task: Task) {
+        Log.d("FragmentHome", "Task completion toggled: ${task.title}")
+        tasksViewModel.toggleTaskCompletion(task.id)
+    }
+
     fun selectCategory(categoryId: String) {
+        Log.d("FragmentHome", "selectCategory called with: $categoryId")
         categoriesViewModel.selectCategory(categoryId)
     }
 
@@ -339,12 +318,10 @@ class FragmentHome : Fragment() {
         topBar.setBackgroundColor(Color.parseColor(category.color))
     }
 
-    // Методы для связи с MainActivity
-    fun getCategories(): MutableList<Category> = categoriesViewModel.getCategoriesList()
+    fun getCategories(): List<Category> = categoriesViewModel.getCategoriesList()
 
     fun setCategoryAdapter(adapter: CategoryAdapter) {
         categoryAdapter = adapter
-        // Сразу обновляем адаптер текущими данными
         categoryAdapter?.updateCategories(categoriesViewModel.getCategoriesList())
     }
 
@@ -357,5 +334,17 @@ class FragmentHome : Fragment() {
 
     fun refreshCategories() {
         categoryAdapter?.updateCategories(categoriesViewModel.getCategoriesList())
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("current_category_id", currentCategoryId)
+    }
+
+    override fun onViewStateRestored(savedInstanceState: Bundle?) {
+        super.onViewStateRestored(savedInstanceState)
+        savedInstanceState?.let {
+            currentCategoryId = it.getString("current_category_id", "all")
+        }
     }
 }

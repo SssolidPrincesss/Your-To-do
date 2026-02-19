@@ -1,123 +1,106 @@
 package com.bountyapp.yourrtodo.viewmodel
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.bountyapp.yourrtodo.data.repository.TaskRepository
 import com.bountyapp.yourrtodo.model.Task
-import java.util.*
+import kotlinx.coroutines.launch
 
-class TasksViewModel : ViewModel() {
+class TasksViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _tasks = MutableLiveData<MutableList<Task>>(mutableListOf())
-    val tasks: LiveData<MutableList<Task>> = _tasks
+    private val repository = TaskRepository(application.applicationContext)
 
-    private val _allTasks = MutableLiveData<MutableList<Task>>(mutableListOf())
-    val allTasks: LiveData<MutableList<Task>> = _allTasks
+    private val _tasks = MutableLiveData<List<Task>>(emptyList())
+    val tasks: LiveData<List<Task>> = _tasks
+
+    private val _isLoading = MutableLiveData(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
+    private val _error = MutableLiveData<String?>(null)
+    val error: LiveData<String?> = _error
 
     init {
-        loadInitialTasks()
+        // Инициализируем задачи при создании ViewModel
+        viewModelScope.launch {
+            repository.initDefaultTasks()
+            loadTasks()
+        }
     }
 
-    private fun loadInitialTasks() {
-        val initialTasks = mutableListOf(
-            Task(
-                id = "1",
-                title = "Создать годовой отчет",
-                dueDate = null,
-                isCompleted = false,
-                isOverdue = false,
-                hasReminder = true,
-                isRecurring = false,
-                hasSubtasks = true,
-                flagColor = "#FFC107",
-                categoryId = "work"
-            ),
-            Task(
-                id = "2",
-                title = "Проверить почту",
-                dueDate = null,
-                isCompleted = false,
-                isOverdue = false,
-                hasReminder = false,
-                isRecurring = true,
-                hasSubtasks = false,
-                flagColor = "#4CAF50",
-                categoryId = "work"
-            ),
-            Task(
-                id = "3",
-                title = "Купить продукты",
-                dueDate = Calendar.getInstance().apply {
-                    add(Calendar.DAY_OF_MONTH, 1)
-                }.time,
-                isCompleted = false,
-                isOverdue = false,
-                hasReminder = true,
-                isRecurring = false,
-                hasSubtasks = false,
-                flagColor = "#2196F3",
-                categoryId = "shopping"
-            ),
-            Task(
-                id = "4",
-                title = "Сделать домашнее задание",
-                dueDate = Calendar.getInstance().apply {
-                    add(Calendar.DAY_OF_MONTH, 3)
-                }.time,
-                isCompleted = false,
-                isOverdue = false,
-                hasReminder = false,
-                isRecurring = false,
-                hasSubtasks = true,
-                flagColor = "#9C27B0",
-                categoryId = "study"
-            ),
-            Task(
-                id = "5",
-                title = "Позвонить родителям",
-                dueDate = Calendar.getInstance().apply {
-                    add(Calendar.DAY_OF_MONTH, -1)
-                }.time,
-                isCompleted = true,
-                isOverdue = false,
-                hasReminder = false,
-                isRecurring = false,
-                hasSubtasks = false,
-                flagColor = "#FF9800",
-                categoryId = "personal"
-            )
-        )
-        _tasks.value = initialTasks
+    private fun loadTasks() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                repository.getAllTasks().collect { taskList ->
+                    _tasks.postValue(taskList)
+                    _isLoading.postValue(false)
+                }
+            } catch (e: Exception) {
+                _error.postValue("Ошибка загрузки задач: ${e.message}")
+                _isLoading.postValue(false)
+            }
+        }
     }
 
     fun getTasks(): List<Task> = _tasks.value ?: emptyList()
 
     fun updateTask(updatedTask: Task) {
-        _tasks.value = _tasks.value?.map { task ->
-            if (task.id == updatedTask.id) updatedTask else task
-        }?.toMutableList()
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                repository.saveTask(updatedTask)
+                _isLoading.value = false
+            } catch (e: Exception) {
+                _error.value = "Ошибка обновления задачи: ${e.message}"
+                _isLoading.value = false
+            }
+        }
     }
 
     fun toggleTaskCompletion(taskId: String): Task? {
         val currentTasks = _tasks.value ?: return null
-        val taskIndex = currentTasks.indexOfFirst { it.id == taskId }
-        if (taskIndex == -1) return null
+        val task = currentTasks.find { it.id == taskId } ?: return null
 
-        val task = currentTasks[taskIndex]
         val updatedTask = task.copy(isCompleted = !task.isCompleted)
 
-        currentTasks[taskIndex] = updatedTask
-        _tasks.value = currentTasks
+        viewModelScope.launch {
+            try {
+                repository.saveTask(updatedTask)
+            } catch (e: Exception) {
+                _error.value = "Ошибка изменения статуса: ${e.message}"
+            }
+        }
 
         return updatedTask
     }
 
     fun addTask(task: Task) {
-        _tasks.value = (_tasks.value ?: mutableListOf()).apply { add(task) }
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                repository.saveTask(task)
+                _isLoading.value = false
+            } catch (e: Exception) {
+                _error.value = "Ошибка добавления задачи: ${e.message}"
+                _isLoading.value = false
+            }
+        }
     }
 
     fun deleteTask(taskId: String) {
-        _tasks.value = _tasks.value?.filter { it.id != taskId }?.toMutableList()
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                repository.deleteTask(taskId)
+                _isLoading.value = false
+            } catch (e: Exception) {
+                _error.value = "Ошибка удаления задачи: ${e.message}"
+                _isLoading.value = false
+            }
+        }
     }
 
     fun getTasksByCategory(categoryId: String): List<Task> {
@@ -126,5 +109,13 @@ class TasksViewModel : ViewModel() {
         } else {
             getTasks().filter { it.categoryId == categoryId }
         }
+    }
+
+    fun getTaskById(taskId: String): Task? {
+        return _tasks.value?.find { it.id == taskId }
+    }
+
+    fun clearError() {
+        _error.value = null
     }
 }

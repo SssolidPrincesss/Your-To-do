@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.Toast
@@ -61,6 +62,7 @@ class TaskActivity : AppCompatActivity() {
 
         categoriesViewModel = ViewModelProvider(this)[CategoriesViewModel::class.java]
 
+
         // Получаем задачу из Intent
         currentTask = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra(EXTRA_TASK, Task::class.java)
@@ -108,8 +110,23 @@ class TaskActivity : AppCompatActivity() {
     }
 
     private fun setupSpinner() {
+        // Получаем категории и сразу логируем
         val categories = categoriesViewModel.getCategoriesList()
+        Log.d("TaskActivity", "Setting up spinner with ${categories.size} categories")
 
+        if (categories.isEmpty()) {
+            // Если категории пустые, пробуем подождать и загрузить снова
+            Handler(Looper.getMainLooper()).postDelayed({
+                val updatedCategories = categoriesViewModel.getCategoriesList()
+                Log.d("TaskActivity", "Retry loading categories: ${updatedCategories.size}")
+                setupSpinnerWithCategories(updatedCategories)
+            }, 500)
+        } else {
+            setupSpinnerWithCategories(categories)
+        }
+    }
+
+    private fun setupSpinnerWithCategories(categories: List<Category>) {
         val adapter = CategorySpinnerAdapter(this, categories)
         binding.spinnerCategories.adapter = adapter
 
@@ -117,6 +134,7 @@ class TaskActivity : AppCompatActivity() {
             val category = categories.find { it.id == task.categoryId }
             if (category != null) {
                 val position = categories.indexOf(category)
+                Log.d("TaskActivity", "Setting selected category to: ${category.name} at position $position")
                 binding.spinnerCategories.setSelection(position)
                 selectedCategory = category
             }
@@ -125,6 +143,7 @@ class TaskActivity : AppCompatActivity() {
         binding.spinnerCategories.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val newCategory = categories[position]
+                Log.d("TaskActivity", "Spinner item selected: ${newCategory.name}")
                 if (selectedCategory?.id != newCategory.id) {
                     selectedCategory = newCategory
                     hasChanges = true
@@ -453,6 +472,7 @@ class TaskActivity : AppCompatActivity() {
         }
     }
 
+
     private fun saveTask() {
         if (!hasChanges && currentTask != null) return
 
@@ -489,4 +509,5 @@ class TaskActivity : AppCompatActivity() {
         saveAndExit()
         super.onBackPressed()
     }
+
 }

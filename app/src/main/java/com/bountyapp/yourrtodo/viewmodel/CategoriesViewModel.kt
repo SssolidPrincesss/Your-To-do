@@ -1,101 +1,160 @@
-// CategoriesViewModel.kt
 package com.bountyapp.yourrtodo.viewmodel
 
+import android.app.Application
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.bountyapp.yourrtodo.data.repository.CategoryRepository
 import com.bountyapp.yourrtodo.model.Category
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 
-class CategoriesViewModel : ViewModel() {
+class CategoriesViewModel(application: Application) : AndroidViewModel(application) {
 
-    // MutableLiveData для внутреннего использования
-    private val _categories = MutableLiveData<MutableList<Category>>(mutableListOf())
+    private val repository = CategoryRepository(application.applicationContext)
 
-    // LiveData для наблюдения извне (только чтение)
-    val categories: LiveData<MutableList<Category>> = _categories
+    private val _categories = MutableLiveData<List<Category>>(emptyList())
+    val categories: LiveData<List<Category>> = _categories
 
-    // Выбранная категория
     private val _selectedCategoryId = MutableLiveData<String>("all")
     val selectedCategoryId: LiveData<String> = _selectedCategoryId
 
+    private val _isLoading = MutableLiveData(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
+    private val _error = MutableLiveData<String?>(null)
+    val error: LiveData<String?> = _error
+
+    // Флаг для предотвращения множественной инициализации
+    private var isInitialized = false
+
     init {
-        // Загружаем начальные категории
-        loadDefaultCategories()
+        viewModelScope.launch {
+            repository.initDefaultCategories()
+            loadCategories()
+        }
     }
 
-    private fun loadDefaultCategories() {
-        val defaultCategories = mutableListOf(
-            Category(id = "all", name = "Все", color = "#2196F3", isSelected = true),
-            Category(id = "work", name = "Работа", color = "#4CAF50", isSelected = false),
-            Category(id = "personal", name = "Личное", color = "#FF9800", isSelected = false),
-            Category(id = "study", name = "Учеба", color = "#9C27B0", isSelected = false),
-            Category(id = "shopping", name = "Покупки", color = "#FF5722", isSelected = false)
-        )
-        _categories.value = defaultCategories
+    private fun loadCategories() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                repository.getAllCategories().collect { categoryList ->
+                    val sortedList = categoryList.sortedWith(
+                        compareBy<Category> {
+                            when (it.id) {
+                                "all" -> 0
+                                else -> 1
+                            }
+                        }.thenBy { it.name }
+                    )
+
+                    _categories.postValue(sortedList)
+
+                    // ВАЖНО: Находим выбранную категорию из БД
+                    val selectedCategory = sortedList.find { it.isSelected }
+
+                    if (selectedCategory != null) {
+                        // Если есть выбранная категория, просто обновляем ID
+                        // НЕ выбираем новую категорию, а используем ту, что уже выбрана
+                        if (_selectedCategoryId.value != selectedCategory.id) {
+                            _selectedCategoryId.postValue(selectedCategory.id)
+                        }
+                    } else if (sortedList.isNotEmpty() && !isInitialized) {
+                        // Только при первой загрузке, если нет выбранной категории, выбираем "Все"
+                        val allCategory = sortedList.find { it.id == "all" }
+                        allCategory?.let {
+                            // Устанавливаем "Все" как выбранную в БД
+                            repository.selectCategory("all")
+                        }
+                    }
+
+                    isInitialized = true
+                    _isLoading.postValue(false)
+                }
+            } catch (e: Exception) {
+                _error.postValue("Ошибка загрузки категорий: ${e.message}")
+                _isLoading.postValue(false)
+            }
+        }
     }
 
-    // Получить текущий список категорий
-    fun getCategoriesList(): MutableList<Category> {
-        return _categories.value ?: mutableListOf()
-    }
+    fun getCategoriesList(): List<Category> = _categories.value ?: emptyList()
 
-    // Добавить новую категорию
     fun addCategory(name: String, color: String) {
-        val currentList = _categories.value ?: mutableListOf()
-
-        // Генерируем уникальный ID
-        val newId = "category_${System.currentTimeMillis()}"
-
-        val newCategory = Category(
-            id = newId,
-            name = name,
-            color = color,
-            isSelected = false
-        )
-
-        currentList.add(newCategory)
-        _categories.value = currentList
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val newCategory = Category(
+                    id = "cat_${System.currentTimeMillis()}",
+                    name = name,
+                    color = color,
+                    isSelected = false
+                )
+                repository.insertCategory(newCategory)
+                _isLoading.value = false
+            } catch (e: Exception) {
+                _error.value = "Ошибка добавления категории: ${e.message}"
+                _isLoading.value = false
+            }
+        }
     }
 
-    // Выбрать категорию
     fun selectCategory(categoryId: String) {
-        val currentList = _categories.value ?: return
+        // Проверяем, не выбрана ли уже эта категория
+        val currentSelected = _selectedCategoryId.value
+        if (currentSelected == categoryId) {
+            Log.d("CategoriesViewModel", "Category $categoryId already selected, ignoring")
+            return
+        }
 
-        // Снимаем выделение со всех
-        currentList.forEach { it.isSelected = false }
-
-        // Выделяем выбранную
-        currentList.find { it.id == categoryId }?.isSelected = true
-
-        _categories.value = currentList
-        _selectedCategoryId.value = categoryId
+        viewModelScope.launch {
+            try {
+                Log.d("CategoriesViewModel", "Selecting category: $categoryId")
+                repository.selectCategory(categoryId)
+                // Не обновляем _selectedCategoryId здесь - это сделает Flow после обновления БД
+            } catch (e: Exception) {
+                _error.value = "Ошибка выбора категории: ${e.message}"
+            }
+        }
     }
 
-    // Получить категорию по ID
     fun getCategoryById(categoryId: String): Category? {
         return _categories.value?.find { it.id == categoryId }
     }
 
-    // Обновить категорию
     fun updateCategory(updatedCategory: Category) {
-        val currentList = _categories.value ?: return
-        val index = currentList.indexOfFirst { it.id == updatedCategory.id }
-        if (index != -1) {
-            currentList[index] = updatedCategory
-            _categories.value = currentList
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                repository.updateCategory(updatedCategory)
+                _isLoading.value = false
+            } catch (e: Exception) {
+                _error.value = "Ошибка обновления категории: ${e.message}"
+                _isLoading.value = false
+            }
         }
     }
 
-    // Удалить категорию
     fun deleteCategory(categoryId: String) {
-        val currentList = _categories.value ?: return
-        currentList.removeAll { it.id == categoryId }
-
-        // Если удалили выбранную категорию, выбираем "Все"
-        if (_selectedCategoryId.value == categoryId) {
-            selectCategory("all")
-        } else {
-            _categories.value = currentList
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val category = getCategoryById(categoryId)
+                if (category != null) {
+                    repository.deleteCategory(category)
+                }
+                _isLoading.value = false
+            } catch (e: Exception) {
+                _error.value = "Ошибка удаления категории: ${e.message}"
+                _isLoading.value = false
+            }
         }
+    }
+
+    fun clearError() {
+        _error.value = null
     }
 }

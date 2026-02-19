@@ -14,7 +14,7 @@ class TaskAdapter(
     private val context: Context,
     private var originalTasks: List<Task>,
     private val onTaskChecked: (Task) -> Unit,
-    private val onTaskClick: (Task) -> Unit // Добавляем лямбду для клика по задаче
+    private val onTaskClick: (Task) -> Unit  // ДОБАВЬТЕ ЭТОТ ПАРАМЕТР
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private var filteredTasks = originalTasks.toMutableList()
@@ -197,7 +197,7 @@ class TaskAdapter(
                 val position = adapterPosition
                 if (position != RecyclerView.NO_POSITION && !filteredTasks[position].isSectionHeader) {
                     val task = filteredTasks[position]
-                    // Просто вызываем лямбду, не пытаемся найти Fragment
+                    // Используем новый параметр onTaskClick
                     onTaskClick(task)
                 }
             }

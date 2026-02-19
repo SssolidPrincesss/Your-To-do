@@ -241,11 +241,14 @@ class CategoryAdapter(
                 categoryCircle.setColorFilter(circleColor, PorterDuff.Mode.SRC_IN)
             }
 
-            itemView.setOnClickListener { onCategoryClick(category) }
+            // Убедитесь, что клик обрабатывается
+            itemView.setOnClickListener {
+                android.util.Log.d("CategoryAdapter", "Category clicked: ${category.name}")
+                onCategoryClick(category)
+            }
         }
-
     }
-    fun updateCategories(newCategories: MutableList<Category>) {
+    fun updateCategories(newCategories: List<Category>) {  // Было MutableList<Category>
         categories = newCategories
         notifyDataSetChanged()
     }
