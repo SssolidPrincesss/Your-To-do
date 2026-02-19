@@ -71,7 +71,7 @@
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_flag"
+                android:src="@drawable/ic_bookmark"
                 android:contentDescription="@string/select_flag_color"
                 android:layout_gravity="center_horizontal" />
 
@@ -86,7 +86,7 @@
                     android:id="@+id/reminder_icon"
                     android:layout_width="18dp"
                     android:layout_height="18dp"
-                    android:src="@drawable/ic_reminder"
+                    android:src="@drawable/ic_alarm"
                     android:visibility="gone"
                     android:contentDescription="@string/reminder" />
 

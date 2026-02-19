@@ -17,9 +17,7 @@ import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bountyapp.yourrtodo.MainActivity
@@ -33,6 +31,7 @@ import com.bountyapp.yourrtodo.viewmodel.CategoriesViewModel
 import com.bountyapp.yourrtodo.viewmodel.TasksViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class FragmentHome : Fragment() {
 
@@ -45,7 +44,7 @@ class FragmentHome : Fragment() {
     private lateinit var topBar: LinearLayout
     private lateinit var recyclerView: RecyclerView
     private lateinit var taskAdapter: TaskAdapter
-    private lateinit var fabAddTask: Button
+    private lateinit var fabAddTask: ImageButton
     private lateinit var mainContent: RelativeLayout
 
     // ViewModel
@@ -60,33 +59,33 @@ class FragmentHome : Fragment() {
     private var lastButtonClickTime = 0L
     private val DOUBLE_CLICK_THRESHOLD = 300L
 
+    companion object {
+        const val REQUEST_CREATE_TASK = 1002
+    }
 
-    private var isReturningFromTask = false
-
-    // Регистрируем контракт для получения результата из TaskActivity
+    // Лаунчер для редактирования существующих задач
     private val taskResultLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        // СНАЧАЛА устанавливаем флаг, потом обрабатываем результат
-        isReturningFromTask = true
-        Log.d("FragmentHome", "Returning from TaskActivity, setting flag to true")
-
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.getParcelableExtra<Task>(TaskActivity.EXTRA_TASK)?.let { updatedTask ->
                 tasksViewModel.updateTask(updatedTask)
                 Toast.makeText(requireContext(), "Задача обновлена", Toast.LENGTH_SHORT).show()
             }
         }
-
-        // НЕ сбрасываем флаг сразу, дадим время на обработку обновлений
-        viewLifecycleOwner.lifecycleScope.launch {
-            // Ждем немного, чтобы все обновления успели обработаться
-            delay(1000)
-            isReturningFromTask = false
-            Log.d("FragmentHome", "Resetting return flag")
-        }
     }
 
+    // Лаунчер для создания новых задач
+    private val taskCreateLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getParcelableExtra<Task>(TaskActivity.EXTRA_TASK)?.let { newTask ->
+                tasksViewModel.addTask(newTask)
+                Toast.makeText(requireContext(), "Задача создана", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -101,7 +100,6 @@ class FragmentHome : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Всегда регистрируем наблюдатели в onViewCreated, но с проверкой жизненного цикла
         Log.d("FragmentHome", "Setting up observers in onViewCreated")
         observeViewModels()
 
@@ -165,14 +163,13 @@ class FragmentHome : Fragment() {
         }
     }
 
-
     private fun setupUI() {
         setupTopBarTransparency()
         setupRecyclerView()
         setupSearch()
 
         fabAddTask.setOnClickListener {
-            Toast.makeText(requireContext(), "Добавить новую задачу", Toast.LENGTH_SHORT).show()
+            createNewTask()
         }
     }
 
@@ -187,15 +184,50 @@ class FragmentHome : Fragment() {
             context = requireContext(),
             originalTasks = emptyList(),
             onTaskChecked = ::handleTaskCompletion,
-            onTaskClick = { task -> openTask(task) }
+            onTaskClick = { task -> openTaskForEdit(task) }
         )
         recyclerView.adapter = taskAdapter
     }
 
-    private fun openTask(task: Task) {
+    private fun createNewTask() {
+        Log.d("FragmentHome", "Creating new task")
+
+        // Создаем пустую задачу с уникальным ID
+        val newTask = Task(
+            id = UUID.randomUUID().toString(),
+            title = "",
+            dueDate = null,
+            isCompleted = false,
+            isOverdue = false,
+            hasReminder = false,
+            isRecurring = false,
+            hasSubtasks = false,
+            flagColor = "#2196F3",
+            categoryId = currentCategoryId,
+            notes = null,
+            reminderTime = null,
+            recurrenceRule = null,
+            subtasks = mutableListOf()
+        )
+
+        openTask(newTask, isNewTask = true)
+    }
+
+    private fun openTaskForEdit(task: Task) {
+        Log.d("FragmentHome", "Opening task for edit: ${task.id}")
+        openTask(task, isNewTask = false)
+    }
+
+    private fun openTask(task: Task, isNewTask: Boolean) {
         val intent = Intent(requireContext(), TaskActivity::class.java)
         intent.putExtra(TaskActivity.EXTRA_TASK, task)
-        taskResultLauncher.launch(intent)
+        intent.putExtra(TaskActivity.EXTRA_IS_NEW_TASK, isNewTask)
+
+        if (isNewTask) {
+            taskCreateLauncher.launch(intent)
+        } else {
+            taskResultLauncher.launch(intent)
+        }
     }
 
     private fun rebuildTasksList() {

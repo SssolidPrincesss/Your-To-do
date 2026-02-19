@@ -43,7 +43,7 @@
     <!-- Кнопка открытия шторки -->
     <LinearLayout
         android:id="@+id/drawer_handle"
-        android:layout_width="32dp"
+        android:layout_width="38dp"
         android:layout_height="58dp"
         android:layout_gravity="start|bottom"
         android:orientation="vertical"
@@ -53,14 +53,14 @@
         android:elevation="20dp"
         android:translationZ="10dp"
         android:outlineProvider="bounds"
-        android:padding="8dp"
+        android:padding="4dp"
         >
 
         <ImageView
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_menu_handle"
-            android:layout_marginBottom="20dp"
+            android:layout_marginBottom="32dp"
             android:contentDescription="Открыть меню" />
     </LinearLayout>
 

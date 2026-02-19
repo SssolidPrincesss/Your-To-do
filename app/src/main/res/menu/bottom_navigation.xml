@@ -8,15 +8,15 @@
     <item
         android:id="@+id/nav_calendar"
         android:title="Календарь"
-        android:icon="@drawable/ic_add" />
+        android:icon="@drawable/ic_calendar_office" />
 
     <item
         android:id="@+id/nav_achievements"
         android:title="Достижения"
-        android:icon="@drawable/ic_flag" />
+        android:icon="@drawable/ic_script" />
 
     <item
         android:id="@+id/nav_settings"
         android:title="Настройки"
-        android:icon="@drawable/ic_subtasks" />
+        android:icon="@drawable/ic_settings" />
 </menu>

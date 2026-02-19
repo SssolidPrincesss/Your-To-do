@@ -55,8 +55,8 @@
 
             <ImageView
                 android:id="@+id/search_action_button"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
                 android:layout_marginStart="8dp"
                 android:src="@drawable/ic_close"
                 android:contentDescription="Очистить поиск"
@@ -80,16 +80,19 @@
         android:clipToPadding="false"
         android:clipChildren="false" />
 
-    <Button
+    <ImageButton
         android:id="@+id/fab_add_task"
         android:layout_width="70dp"
-        android:layout_height="80dp"
+        android:layout_height="70dp"
         android:layout_centerHorizontal="true"
         android:layout_alignParentBottom="true"
         android:layout_marginBottom="10dp"
-        android:text="+"
-        android:textSize="32sp"
-        android:textColor="@android:color/white"
+        android:src="@drawable/ic_edit"
+        android:background="@drawable/circular_button"
+        android:scaleType="centerInside"
+        android:padding="20dp"
+        style="@style/Widget.AppCompat.ImageButton"
         android:elevation="8dp"
         android:stateListAnimator="@null" />
+
 </RelativeLayout>

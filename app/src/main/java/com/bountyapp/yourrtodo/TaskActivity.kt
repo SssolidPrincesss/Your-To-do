@@ -18,7 +18,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.bountyapp.yourrtodo.adapter.CategorySpinnerAdapter
 import com.bountyapp.yourrtodo.adapter.SubtaskAdapter
 import com.bountyapp.yourrtodo.databinding.ActivityTaskBinding
-import com.bountyapp.yourrtodo.interfaces.TaskUpdateListener
 import com.bountyapp.yourrtodo.model.Category
 import com.bountyapp.yourrtodo.model.Subtask
 import com.bountyapp.yourrtodo.model.Task
@@ -39,6 +38,9 @@ class TaskActivity : AppCompatActivity() {
     private var recurrenceRule: String? = null
     private var notes: String? = null
 
+    // Флаг для отслеживания, является ли задача новой
+    private var isNewTask = false
+
     // Флаг для отслеживания изменений
     private var hasChanges = false
 
@@ -46,12 +48,9 @@ class TaskActivity : AppCompatActivity() {
     private var autoSaveHandler = Handler(Looper.getMainLooper())
     private var autoSaveRunnable: Runnable? = null
 
-    // Listener для отправки обновлений
-    private var taskUpdateListener: TaskUpdateListener? = null
-
     companion object {
         const val EXTRA_TASK = "extra_task"
-        const val EXTRA_TASK_UPDATED = "extra_task_updated"
+        const val EXTRA_IS_NEW_TASK = "extra_is_new_task"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +61,9 @@ class TaskActivity : AppCompatActivity() {
 
         categoriesViewModel = ViewModelProvider(this)[CategoriesViewModel::class.java]
 
+        // Получаем флаг новой задачи
+        isNewTask = intent.getBooleanExtra(EXTRA_IS_NEW_TASK, false)
+        Log.d("TaskActivity", "isNewTask: $isNewTask")
 
         // Получаем задачу из Intent
         currentTask = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -77,6 +79,11 @@ class TaskActivity : AppCompatActivity() {
         setupClickListeners()
         setupTextWatchers()
         loadTaskData()
+
+        // Если это новая задача, устанавливаем соответствующий заголовок
+        if (isNewTask) {
+            supportActionBar?.title = "Новая задача"
+        }
     }
 
     private fun initViews() {
@@ -110,12 +117,10 @@ class TaskActivity : AppCompatActivity() {
     }
 
     private fun setupSpinner() {
-        // Получаем категории и сразу логируем
         val categories = categoriesViewModel.getCategoriesList()
         Log.d("TaskActivity", "Setting up spinner with ${categories.size} categories")
 
         if (categories.isEmpty()) {
-            // Если категории пустые, пробуем подождать и загрузить снова
             Handler(Looper.getMainLooper()).postDelayed({
                 val updatedCategories = categoriesViewModel.getCategoriesList()
                 Log.d("TaskActivity", "Retry loading categories: ${updatedCategories.size}")
@@ -130,13 +135,27 @@ class TaskActivity : AppCompatActivity() {
         val adapter = CategorySpinnerAdapter(this, categories)
         binding.spinnerCategories.adapter = adapter
 
-        currentTask?.let { task ->
-            val category = categories.find { it.id == task.categoryId }
-            if (category != null) {
-                val position = categories.indexOf(category)
-                Log.d("TaskActivity", "Setting selected category to: ${category.name} at position $position")
-                binding.spinnerCategories.setSelection(position)
-                selectedCategory = category
+        if (!isNewTask) {
+            // Для существующей задачи выбираем её категорию
+            currentTask?.let { task ->
+                val category = categories.find { it.id == task.categoryId }
+                if (category != null) {
+                    val position = categories.indexOf(category)
+                    Log.d("TaskActivity", "Setting selected category to: ${category.name} at position $position")
+                    binding.spinnerCategories.setSelection(position)
+                    selectedCategory = category
+                }
+            }
+        } else {
+            // Для новой задачи выбираем категорию из текущей (она уже в currentTask)
+            currentTask?.let { task ->
+                val category = categories.find { it.id == task.categoryId }
+                if (category != null) {
+                    val position = categories.indexOf(category)
+                    Log.d("TaskActivity", "Setting new task category to: ${category.name} at position $position")
+                    binding.spinnerCategories.setSelection(position)
+                    selectedCategory = category
+                }
             }
         }
 
@@ -206,25 +225,35 @@ class TaskActivity : AppCompatActivity() {
         currentTask?.let { task ->
             binding.etTaskTitle.setText(task.title)
 
-            subtasks.clear()
-            task.subtasks?.let {
-                subtasks.addAll(it)
+            if (!isNewTask) {
+                // Для существующей задачи загружаем все данные
+                subtasks.clear()
+                task.subtasks?.let {
+                    subtasks.addAll(it)
+                }
+                subtaskAdapter.updateSubtasks(subtasks)
+
+                dueDate = task.dueDate
+                updateDueDateDisplay()
+
+                reminderTime = task.reminderTime
+                updateReminderDisplay()
+
+                recurrenceRule = task.recurrenceRule
+                updateRecurrenceDisplay()
+
+                notes = task.notes
+                updateNotesDisplay()
+
+                updateCompleteButtonState(task.isCompleted)
+            } else {
+                // Для новой задачи оставляем поля пустыми
+                updateDueDateDisplay()
+                updateReminderDisplay()
+                updateRecurrenceDisplay()
+                updateNotesDisplay()
+                updateCompleteButtonState(false)
             }
-            subtaskAdapter.updateSubtasks(subtasks)
-
-            dueDate = task.dueDate
-            updateDueDateDisplay()
-
-            reminderTime = task.reminderTime
-            updateReminderDisplay()
-
-            recurrenceRule = task.recurrenceRule
-            updateRecurrenceDisplay()
-
-            notes = task.notes
-            updateNotesDisplay()
-
-            updateCompleteButtonState(task.isCompleted)
         }
 
         hasChanges = false
@@ -472,9 +501,9 @@ class TaskActivity : AppCompatActivity() {
         }
     }
 
-
     private fun saveTask() {
-        if (!hasChanges && currentTask != null) return
+        // Для новой задачи всегда сохраняем, даже если нет изменений
+        if (!hasChanges && !isNewTask) return
 
         currentTask?.let { task ->
             task.title = binding.etTaskTitle.text.toString()
@@ -488,10 +517,12 @@ class TaskActivity : AppCompatActivity() {
 
             hasChanges = false
 
-            // Отправляем обновленную задачу через Intent
+            // Отправляем задачу через Intent
             val resultIntent = Intent()
             resultIntent.putExtra(EXTRA_TASK, task)
             setResult(RESULT_OK, resultIntent)
+
+            Log.d("TaskActivity", "Task saved: ${task.id}, isNewTask: $isNewTask")
         }
     }
 
@@ -509,5 +540,4 @@ class TaskActivity : AppCompatActivity() {
         saveAndExit()
         super.onBackPressed()
     }
-
 }
