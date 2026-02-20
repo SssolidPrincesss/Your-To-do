@@ -100,6 +100,7 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
                 _error.value = "Ошибка удаления задачи: ${e.message}"
                 _isLoading.value = false
             }
+            loadTasks()
         }
     }
 

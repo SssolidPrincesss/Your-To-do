@@ -1,10 +1,10 @@
 package com.bountyapp.yourrtodo.adapter
 
 import android.graphics.Color
-import android.graphics.Paint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
@@ -24,7 +24,6 @@ class CalendarAdapter(
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_calendar_day, parent, false)
         return CalendarDayViewHolder(view) { position ->
-            // Обработчик клика из ViewHolder
             handleDayClick(position)
         }
     }
@@ -75,9 +74,10 @@ class CalendarAdapter(
         itemView: View,
         private val onClick: (Int) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
+
         private val dayNumber: TextView = itemView.findViewById(R.id.day_number)
-        private val dayEventsIndicator: View = itemView.findViewById(R.id.day_events_indicator)
-        private val dayStar: TextView = itemView.findViewById(R.id.day_star)
+        private val dayEventsIndicator: ImageView = itemView.findViewById(R.id.day_events_indicator)
+        private val dayStar: ImageView = itemView.findViewById(R.id.day_star) // Теперь ImageView
 
         init {
             itemView.setOnClickListener {
@@ -91,66 +91,58 @@ class CalendarAdapter(
         fun bind(day: CalendarDay, isSelected: Boolean) {
             // Устанавливаем номер дня
             dayNumber.text = day.dayOfMonth.toString()
-
-            // Сбрасываем все стили
             dayNumber.paintFlags = 0
             dayNumber.alpha = 1f
 
-            // Визуальное оформление
+            // Дни не из текущего месяца
+            if (!day.isCurrentMonth) {
+                dayNumber.setTextColor(Color.parseColor("#999999"))
+                dayNumber.alpha = 0.5f
+                dayStar.visibility = View.GONE
+                dayEventsIndicator.visibility = View.GONE
+                return
+            }
+
+            // Сбрасываем цвет для дней текущего месяца
+            dayNumber.setTextColor(Color.BLACK)
+            dayNumber.alpha = 1f
+
+            // Обработка звездочек с использованием векторных изображений
             when {
-                !day.isCurrentMonth -> {
-                    // Дни другого месяца - серые
-                    dayNumber.setTextColor(Color.parseColor("#999999"))
-                    dayNumber.alpha = 0.5f
-                    dayStar.visibility = View.GONE
-                    dayEventsIndicator.visibility = View.GONE
+                // Сегодня и выбрано - заполненная звезда
+                day.isToday && isSelected -> {
+                    dayStar.visibility = View.VISIBLE
+                    dayStar.setImageResource(R.drawable.ic_star_filled) // Замените на вашу иконку
+                    dayStar.setColorFilter(Color.parseColor("#FFC107"))
+                    dayNumber.setTextColor(Color.BLACK)
                 }
+                // Сегодня (не выбрано) - пустая звезда
                 day.isToday -> {
-                    // Сегодня - пустая звезда
-                    dayNumber.setTextColor(Color.BLACK)
                     dayStar.visibility = View.VISIBLE
-                    dayStar.text = "☆"
-                    dayStar.setTextColor(Color.parseColor("#FFC107"))
-
-                    // Подчеркивание если есть события
-                    if (day.hasEvents) {
-                        dayNumber.paintFlags = dayNumber.paintFlags or Paint.UNDERLINE_TEXT_FLAG
-                        dayNumber.setTextColor(Color.RED)
-                        dayEventsIndicator.visibility = View.VISIBLE
-                    } else {
-                        dayEventsIndicator.visibility = View.GONE
-                    }
+                    dayStar.setImageResource(R.drawable.ic_star_outline) // Замените на вашу иконку
+                    dayStar.setColorFilter(Color.parseColor("#FFC107"))
+                    dayNumber.setTextColor(Color.BLACK)
                 }
+                // Выбрано (не сегодня) - заполненная звезда
                 isSelected -> {
-                    // Выбранный день - заполненная звезда
-                    dayNumber.setTextColor(Color.BLACK)
                     dayStar.visibility = View.VISIBLE
-                    dayStar.text = "★"
-                    dayStar.setTextColor(Color.parseColor("#FFC107"))
-
-                    // Подчеркивание если есть события
-                    if (day.hasEvents) {
-                        dayNumber.paintFlags = dayNumber.paintFlags or Paint.UNDERLINE_TEXT_FLAG
-                        dayNumber.setTextColor(Color.RED)
-                        dayEventsIndicator.visibility = View.VISIBLE
-                    } else {
-                        dayEventsIndicator.visibility = View.GONE
-                    }
-                }
-                else -> {
-                    // Обычный день
+                    dayStar.setImageResource(R.drawable.ic_star_filled) // Замените на вашу иконку
+                    dayStar.setColorFilter(Color.parseColor("#FFC107"))
                     dayNumber.setTextColor(Color.BLACK)
-                    dayStar.visibility = View.GONE
-
-                    // Подчеркивание если есть события
-                    if (day.hasEvents) {
-                        dayNumber.paintFlags = dayNumber.paintFlags or Paint.UNDERLINE_TEXT_FLAG
-                        dayNumber.setTextColor(Color.RED)
-                        dayEventsIndicator.visibility = View.VISIBLE
-                    } else {
-                        dayEventsIndicator.visibility = View.GONE
-                    }
                 }
+                // Обычный день
+                else -> {
+                    dayStar.visibility = View.GONE
+                    dayNumber.setTextColor(Color.BLACK)
+                }
+            }
+
+            // Волнистая линия для дней с событиями
+            if (day.hasEvents) {
+                dayEventsIndicator.visibility = View.VISIBLE
+                dayEventsIndicator.setColorFilter(Color.RED)
+            } else {
+                dayEventsIndicator.visibility = View.GONE
             }
         }
     }

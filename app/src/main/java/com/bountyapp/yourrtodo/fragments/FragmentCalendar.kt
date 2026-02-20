@@ -88,12 +88,14 @@ class FragmentCalendar : Fragment() {
         tempCalendar.add(Calendar.DAY_OF_MONTH, -offset)
         for (i in 0 until offset) {
             val date = tempCalendar.time
+            val dayEvents = getEventsForDate(date)
             days.add(CalendarDay(
                 date = date,
                 dayOfMonth = tempCalendar.get(Calendar.DAY_OF_MONTH),
                 isCurrentMonth = false,
                 isToday = isToday(date),
-                hasEvents = hasEventsOnDate(date)
+                hasEvents = dayEvents.isNotEmpty(),
+                events = dayEvents
             ))
             tempCalendar.add(Calendar.DAY_OF_MONTH, 1)
         }
@@ -106,12 +108,14 @@ class FragmentCalendar : Fragment() {
         val daysInMonth = tempCalendar.getActualMaximum(Calendar.DAY_OF_MONTH)
         for (i in 1..daysInMonth) {
             val date = tempCalendar.time
+            val dayEvents = getEventsForDate(date)
             days.add(CalendarDay(
                 date = date,
                 dayOfMonth = i,
                 isCurrentMonth = true,
                 isToday = isToday(date),
-                hasEvents = hasEventsOnDate(date)
+                hasEvents = dayEvents.isNotEmpty(),
+                events = dayEvents
             ))
             tempCalendar.add(Calendar.DAY_OF_MONTH, 1)
         }
@@ -121,16 +125,25 @@ class FragmentCalendar : Fragment() {
         val remainingCells = totalCells - days.size
         for (i in 0 until remainingCells) {
             val date = tempCalendar.time
+            val dayEvents = getEventsForDate(date)
             days.add(CalendarDay(
                 date = date,
                 dayOfMonth = tempCalendar.get(Calendar.DAY_OF_MONTH),
                 isCurrentMonth = false,
                 isToday = isToday(date),
-                hasEvents = hasEventsOnDate(date)
+                hasEvents = dayEvents.isNotEmpty(),
+                events = dayEvents
             ))
             tempCalendar.add(Calendar.DAY_OF_MONTH, 1)
         }
     }
+    private fun getEventsForDate(date: Date): List<CalendarEvent> {
+        val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+        val checkDateStr = dateFormat.format(date)
+        return allEvents.filter { dateFormat.format(it.date) == checkDateStr }
+    }
+
+
 
     private fun isToday(date: Date): Boolean {
         val today = Calendar.getInstance()

@@ -85,6 +85,7 @@ class TaskRepository(context: Context) {
 
     suspend fun deleteTask(taskId: String) {
         taskDao.getTaskById(taskId)?.let { taskEntity ->
+            subtaskDao.deleteSubtasksForTask(taskId)
             taskDao.deleteTask(taskEntity)
         }
     }

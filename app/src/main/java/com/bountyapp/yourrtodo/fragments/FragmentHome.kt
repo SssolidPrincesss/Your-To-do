@@ -15,9 +15,11 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bountyapp.yourrtodo.MainActivity
@@ -25,6 +27,8 @@ import com.bountyapp.yourrtodo.R
 import com.bountyapp.yourrtodo.TaskActivity
 import com.bountyapp.yourrtodo.adapter.CategoryAdapter
 import com.bountyapp.yourrtodo.adapter.TaskAdapter
+import com.bountyapp.yourrtodo.callbacks.TaskItemTouchCallback
+import com.bountyapp.yourrtodo.callbacks.TaskSwipeCallback
 import com.bountyapp.yourrtodo.model.Category
 import com.bountyapp.yourrtodo.model.Task
 import com.bountyapp.yourrtodo.viewmodel.CategoriesViewModel
@@ -33,7 +37,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-class FragmentHome : Fragment() {
+class FragmentHome : Fragment(), TaskSwipeCallback { // ВАЖНО: реализуем интерфейс
 
     // UI элементы
     private lateinit var categoryTitle: TextView
@@ -58,6 +62,8 @@ class FragmentHome : Fragment() {
 
     private var lastButtonClickTime = 0L
     private val DOUBLE_CLICK_THRESHOLD = 300L
+
+    private lateinit var itemTouchHelper: ItemTouchHelper
 
     companion object {
         const val REQUEST_CREATE_TASK = 1002
@@ -187,6 +193,68 @@ class FragmentHome : Fragment() {
             onTaskClick = { task -> openTaskForEdit(task) }
         )
         recyclerView.adapter = taskAdapter
+
+        // ИСПРАВЛЕНО: Передаем this (FragmentHome) как TaskSwipeCallback
+        val callback = TaskItemTouchCallback(this)
+        itemTouchHelper = ItemTouchHelper(callback)
+        itemTouchHelper.attachToRecyclerView(recyclerView)
+    }
+
+    // ИСПРАВЛЕНО: Реализация метода интерфейса TaskSwipeCallback
+    override fun onTaskSwiped(position: Int) {
+        // Проверяем, что позиция валидна
+        if (position < 0 || position >= taskAdapter.itemCount) {
+            return
+        }
+
+        // Получаем задачу из адаптера
+        val task = taskAdapter.getTaskAtPosition(position)
+
+        // Проверяем, не является ли это заголовком секции
+        if (task.isSectionHeader) {
+            taskAdapter.notifyItemChanged(position) // Возвращаем элемент на место
+            return
+        }
+
+        // Показываем диалог подтверждения
+        showDeleteConfirmationDialog(task, position)
+    }
+
+    private fun showDeleteConfirmationDialog(task: Task, position: Int) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Удаление задачи")
+            .setMessage("Вы уверены, что хотите удалить задачу \"${task.title}\"?")
+            .setPositiveButton("Удалить") { _, _ ->
+                // Удаляем задачу
+                deleteTask(task, position)
+            }
+            .setNegativeButton("Отмена") { _, _ ->
+                // Возвращаем элемент на место
+                taskAdapter.notifyItemChanged(position)
+            }
+            .setOnCancelListener {
+                // Возвращаем элемент на место при отмене
+                taskAdapter.notifyItemChanged(position)
+            }
+            .show()
+    }
+
+    private fun deleteTask(task: Task, position: Int) {
+        lifecycleScope.launch {
+            try {
+                // Удаляем из базы данных
+                tasksViewModel.deleteTask(task.id)
+
+                // Удаляем из адаптера
+                taskAdapter.removeTask(position)
+
+                Toast.makeText(requireContext(), "Задача удалена", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Ошибка при удалении задачи", Toast.LENGTH_SHORT).show()
+                // Возвращаем элемент на место в случае ошибки
+                taskAdapter.notifyItemChanged(position)
+            }
+        }
     }
 
     private fun createNewTask() {

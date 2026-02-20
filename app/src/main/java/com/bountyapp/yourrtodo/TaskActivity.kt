@@ -12,6 +12,7 @@ import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -25,6 +26,11 @@ import com.bountyapp.yourrtodo.viewmodel.CategoriesViewModel
 import java.util.*
 
 class TaskActivity : AppCompatActivity() {
+
+
+    private var hasReminder: Boolean = false
+    private var isRecurring: Boolean = false
+    private var hasSubtasks: Boolean = false
 
     private lateinit var binding: ActivityTaskBinding
     private lateinit var categoriesViewModel: CategoriesViewModel
@@ -284,6 +290,8 @@ class TaskActivity : AppCompatActivity() {
                         )
 
                         subtasks.add(newSubtask)
+                        // ВАЖНО: устанавливаем флаг hasSubtasks = true
+                        hasSubtasks = true
                         subtaskAdapter.updateSubtasks(subtasks)
 
                         hasChanges = true
@@ -301,6 +309,18 @@ class TaskActivity : AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    private fun deleteSubtask(subtask: Subtask) {
+        val index = subtasks.indexOfFirst { it.id == subtask.id }
+        if (index != -1) {
+            subtasks.removeAt(index)
+            // Обновляем флаг hasSubtasks
+            hasSubtasks = subtasks.isNotEmpty()
+            subtaskAdapter.updateSubtasks(subtasks)
+            hasChanges = true
+            scheduleAutoSave()
+        }
     }
 
     private fun showEditSubtaskDialog(subtask: Subtask) {
@@ -393,6 +413,8 @@ class TaskActivity : AppCompatActivity() {
                 calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
                 calendar.set(Calendar.MINUTE, minute)
                 reminderTime = calendar.time
+                // ВАЖНО: устанавливаем флаг hasReminder = true
+                hasReminder = true
                 updateReminderDisplay()
                 hasChanges = true
                 scheduleAutoSave()
@@ -401,6 +423,15 @@ class TaskActivity : AppCompatActivity() {
             calendar.get(Calendar.MINUTE),
             true
         ).show()
+    }
+
+    // Добавьте метод для сброса напоминания
+    private fun clearReminder() {
+        reminderTime = null
+        hasReminder = false
+        updateReminderDisplay()
+        hasChanges = true
+        scheduleAutoSave()
     }
 
     private fun updateReminderDisplay() {
@@ -430,6 +461,8 @@ class TaskActivity : AppCompatActivity() {
                     4 -> "YEARLY"
                     else -> null
                 }
+                // ВАЖНО: устанавливаем флаг isRecurring = true если выбрано повторение
+                isRecurring = recurrenceRule != null
                 updateRecurrenceDisplay()
                 hasChanges = true
                 scheduleAutoSave()
@@ -437,7 +470,6 @@ class TaskActivity : AppCompatActivity() {
             .setPositiveButton("ОК", null)
             .show()
     }
-
     private fun updateRecurrenceDisplay() {
         binding.tvRecurrence.text = when (recurrenceRule) {
             "DAILY" -> "Каждый день"
@@ -501,29 +533,41 @@ class TaskActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveTask() {
-        // Для новой задачи всегда сохраняем, даже если нет изменений
-        if (!hasChanges && !isNewTask) return
+    private fun saveTask(): Boolean {
+        val title = binding.etTaskTitle.text.toString().trim()
+        if (title.isEmpty()) {
+            binding.etTaskTitle.error = "Введите название задачи"
+            binding.etTaskTitle.requestFocus()
+            return false
+        }
+
+        if (!hasChanges && !isNewTask) return true
 
         currentTask?.let { task ->
-            task.title = binding.etTaskTitle.text.toString()
+            task.title = title
             task.dueDate = dueDate
             task.reminderTime = reminderTime
             task.recurrenceRule = recurrenceRule
             task.notes = notes
             task.categoryId = selectedCategory?.id ?: "all"
+
+            // ВАЖНО: устанавливаем флаги на основе текущего состояния
+            task.hasReminder = reminderTime != null
+            task.isRecurring = recurrenceRule != null
             task.hasSubtasks = subtasks.isNotEmpty()
+
             task.subtasks = subtasks.toMutableList()
 
             hasChanges = false
 
-            // Отправляем задачу через Intent
             val resultIntent = Intent()
             resultIntent.putExtra(EXTRA_TASK, task)
             setResult(RESULT_OK, resultIntent)
 
             Log.d("TaskActivity", "Task saved: ${task.id}, isNewTask: $isNewTask")
+            return true
         }
+        return false
     }
 
     private fun saveAndExit() {
@@ -537,7 +581,20 @@ class TaskActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        saveAndExit()
-        super.onBackPressed()
+        // Пытаемся сохранить, и если не получается (нет названия), показываем предупреждение
+        if (!saveTask()) {
+            AlertDialog.Builder(this)
+                .setTitle("Название задачи")
+                .setMessage("У задачи должно быть название. Хотите ввести название или отменить создание задачи?")
+                .setPositiveButton("Ввести название") { _, _ ->
+                    binding.etTaskTitle.requestFocus()
+                }
+                .setNegativeButton("Отменить") { _, _ ->
+                    super.onBackPressed() // Закрываем без сохранения
+                }
+                .show()
+        } else {
+            super.onBackPressed()
+        }
     }
 }

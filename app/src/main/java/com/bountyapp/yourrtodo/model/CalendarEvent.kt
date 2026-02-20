@@ -1,7 +1,9 @@
 package com.bountyapp.yourrtodo.model
 
 import java.util.*
-
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+import java.util.*
 data class CalendarEvent(
     val id: String,
     val title: String,

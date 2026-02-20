@@ -6,72 +6,65 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.bountyapp.yourrtodo.R
 import com.bountyapp.yourrtodo.model.Task
+import com.google.android.material.card.MaterialCardView
 
 class TaskAdapter(
     private val context: Context,
     private var originalTasks: List<Task>,
     private val onTaskChecked: (Task) -> Unit,
-    private val onTaskClick: (Task) -> Unit  // ДОБАВЬТЕ ЭТОТ ПАРАМЕТР
+    private val onTaskClick: (Task) -> Unit,
+    private val onFlagClick: ((Task) -> Unit)? = null // Опциональный обработчик для флага
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private var filteredTasks = originalTasks.toMutableList()
     private val VIEW_TYPE_SECTION = 0
     private val VIEW_TYPE_TASK = 1
 
-    // Храним состояние свернутости для каждой секции
     private val collapsedSections = mutableSetOf<String>()
-
-    // Текущий запрос поиска
     private var currentSearchQuery = ""
 
-    // Новый метод для обновления списка
+    // Флаг для отслеживания, находится ли адаптер в режиме свайпа
+    private var isSwiping = false
+
     fun updateOriginalTasks(newTasks: List<Task>) {
         originalTasks = newTasks
-        applySearchAndSections() // Перестраиваем с учетом поиска
+        applySearchAndSections()
     }
 
     private fun applySearchAndSections() {
         filteredTasks.clear()
 
         if (currentSearchQuery.isEmpty()) {
-            // Нормальный режим - показываем с секциями
             var currentSection: String? = null
 
             for (task in originalTasks) {
                 if (task.isSectionHeader) {
                     currentSection = task.sectionTitle
-                    // Всегда добавляем заголовок секции
                     filteredTasks.add(task)
                 } else {
-                    // Добавляем задачи только если их секция не свернута
                     if (currentSection != null && !collapsedSections.contains(currentSection)) {
                         filteredTasks.add(task)
                     }
                 }
             }
         } else {
-            // Режим поиска - показываем только подходящие задачи
             val query = currentSearchQuery.lowercase().trim()
 
-            // Собираем все задачи, которые подходят под поиск
             val matchingTasks = originalTasks.filter { task ->
                 if (task.isSectionHeader) return@filter false
-
-                val matchesTitle = task.title.lowercase().contains(query)
-                val matchesDate = task.getDisplayDate().lowercase().contains(query)
-
-                matchesTitle || matchesDate
+                task.title.lowercase().contains(query) ||
+                        task.getDisplayDate().lowercase().contains(query)
             }
 
-            // Если есть результаты поиска, добавляем заголовок
             if (matchingTasks.isNotEmpty()) {
                 filteredTasks.add(Task.createSectionHeader("Результаты поиска: \"$currentSearchQuery\""))
                 filteredTasks.addAll(matchingTasks)
             } else {
-                // Если нет результатов, показываем заголовок "Нет результатов"
                 filteredTasks.add(Task.createSectionHeader("Ничего не найдено"))
             }
         }
@@ -88,9 +81,7 @@ class TaskAdapter(
         applySearchAndSections()
     }
 
-    fun isSectionCollapsed(sectionTitle: String): Boolean {
-        return collapsedSections.contains(sectionTitle)
-    }
+    fun isSectionCollapsed(sectionTitle: String): Boolean = collapsedSections.contains(sectionTitle)
 
     fun filter(query: String) {
         currentSearchQuery = query
@@ -102,8 +93,33 @@ class TaskAdapter(
         applySearchAndSections()
     }
 
-    fun isInSearchMode(): Boolean {
-        return currentSearchQuery.isNotEmpty()
+    fun isInSearchMode(): Boolean = currentSearchQuery.isNotEmpty()
+
+    fun getTaskAtPosition(position: Int): Task {
+        return filteredTasks[position]
+    }
+
+    fun removeTask(position: Int): Task {
+        val task = filteredTasks[position]
+
+        if (task.isSectionHeader) {
+            return task
+        }
+
+        val originalPosition = originalTasks.indexOfFirst { it.id == task.id }
+        if (originalPosition != -1) {
+            originalTasks = originalTasks.toMutableList().apply { removeAt(originalPosition) }
+        }
+
+        filteredTasks.removeAt(position)
+        notifyItemRemoved(position)
+
+        return task
+    }
+
+    // Метод для временного скрытия элемента при свайпе
+    fun setSwiping(swiping: Boolean) {
+        isSwiping = swiping
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -133,7 +149,7 @@ class TaskAdapter(
                 val isSearchResult = title.startsWith("Результаты поиска:") || title == "Ничего не найдено"
                 holder.bind(title, isSearchResult)
             }
-            is TaskViewHolder -> holder.bind(task)
+            is TaskViewHolder -> holder.bind(task, position)
         }
     }
 
@@ -150,7 +166,6 @@ class TaskAdapter(
                     val section = filteredTasks[position]
                     val title = section.sectionTitle.orEmpty()
 
-                    // Не позволяем сворачивать результаты поиска
                     if (!title.startsWith("Результаты поиска:") && title != "Ничего не найдено") {
                         toggleSection(title)
                     }
@@ -162,52 +177,77 @@ class TaskAdapter(
             sectionTitle.text = title
 
             if (isSearchResult) {
-                // Для результатов поиска скрываем стрелку
                 sectionArrow.visibility = View.GONE
             } else {
                 sectionArrow.visibility = View.VISIBLE
-                // Устанавливаем правильную стрелку в зависимости от состояния
-                if (isSectionCollapsed(title)) {
-                    sectionArrow.setImageResource(R.drawable.ic_arrow_up)
-                } else {
-                    sectionArrow.setImageResource(R.drawable.ic_arrow_down)
-                }
+                sectionArrow.setImageResource(
+                    if (isSectionCollapsed(title)) R.drawable.ic_arrow_up
+                    else R.drawable.ic_arrow_down
+                )
             }
         }
     }
 
     inner class TaskViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val taskCard: MaterialCardView = itemView.findViewById(R.id.task_card)
         private val taskCheckbox: CheckBox = itemView.findViewById(R.id.task_checkbox)
         private val taskTitle: TextView = itemView.findViewById(R.id.task_title)
         private val taskDate: TextView = itemView.findViewById(R.id.task_date)
-        private val taskCard: View = itemView.findViewById(R.id.task_card)
+        private val flagButton: ImageButton = itemView.findViewById(R.id.flag_button)
+        private val reminderIcon: ImageView = itemView.findViewById(R.id.reminder_icon)
+        private val recurringIcon: ImageView = itemView.findViewById(R.id.recurring_icon)
+        private val subtasksIcon: ImageView = itemView.findViewById(R.id.subtasks_icon)
+        private val completedOverlay: View = itemView.findViewById(R.id.completed_overlay)
 
         init {
-            // ТОЛЬКО клик по чекбоксу
+            // Обработка клика по чекбоксу
             taskCheckbox.setOnClickListener {
                 val position = adapterPosition
-                if (position != RecyclerView.NO_POSITION && !filteredTasks[position].isSectionHeader) {
+                if (position != RecyclerView.NO_POSITION) {
                     val task = filteredTasks[position]
-                    onTaskChecked(task)
+                    if (!task.isSectionHeader) {
+                        onTaskChecked(task)
+                    }
                 }
             }
 
-            // Клик по карточке для открытия деталей задачи
+            // Обработка клика по карточке (открытие задачи)
             taskCard.setOnClickListener {
                 val position = adapterPosition
-                if (position != RecyclerView.NO_POSITION && !filteredTasks[position].isSectionHeader) {
+                if (position != RecyclerView.NO_POSITION) {
                     val task = filteredTasks[position]
-                    // Используем новый параметр onTaskClick
-                    onTaskClick(task)
+                    if (!task.isSectionHeader) {
+                        onTaskClick(task)
+                    }
+                }
+            }
+
+            // Обработка клика по флагу (если нужна)
+            flagButton.setOnClickListener {
+                val position = adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    val task = filteredTasks[position]
+                    if (!task.isSectionHeader) {
+                        onFlagClick?.invoke(task)
+                    }
                 }
             }
         }
 
-        fun bind(task: Task) {
+        fun bind(task: Task, position: Int) {
             if (task.isSectionHeader) return
 
+            // Устанавливаем данные
             taskTitle.text = task.title
             taskDate.text = task.getDisplayDate()
+
+            // Устанавливаем цвет флага (если используется)
+            try {
+                flagButton.setColorFilter(ContextCompat.getColor(context, android.R.color.transparent))
+                // Здесь можно установить цвет флага из task.flagColor
+            } catch (e: Exception) {
+                flagButton.visibility = View.GONE
+            }
 
             // Устанавливаем состояние чекбокса
             taskCheckbox.isChecked = task.isCompleted
@@ -215,25 +255,25 @@ class TaskAdapter(
             // Визуальные эффекты для завершенных задач
             if (task.isCompleted) {
                 taskTitle.paintFlags = Paint.STRIKE_THRU_TEXT_FLAG or Paint.ANTI_ALIAS_FLAG
-                taskTitle.setTextColor(context.getColor(android.R.color.darker_gray))
-                taskDate.setTextColor(context.getColor(android.R.color.darker_gray))
+                taskTitle.setTextColor(ContextCompat.getColor(context, android.R.color.darker_gray))
+                taskDate.setTextColor(ContextCompat.getColor(context, android.R.color.darker_gray))
+                completedOverlay.visibility = View.VISIBLE
+                taskCard.alpha = 0.7f
             } else {
                 taskTitle.paintFlags = Paint.ANTI_ALIAS_FLAG
-                taskTitle.setTextColor(context.getColor(android.R.color.black))
-                taskDate.setTextColor(context.getColor(android.R.color.darker_gray))
+                taskTitle.setTextColor(ContextCompat.getColor(context, android.R.color.black))
+                taskDate.setTextColor(ContextCompat.getColor(context, android.R.color.darker_gray))
+                completedOverlay.visibility = View.GONE
+                taskCard.alpha = 1.0f
             }
 
-            // Показываем/скрываем иконки в зависимости от состояния задачи
-            val reminderIcon: ImageView = itemView.findViewById(R.id.reminder_icon)
-            val recurringIcon: ImageView = itemView.findViewById(R.id.recurring_icon)
-            val subtasksIcon: ImageView = itemView.findViewById(R.id.subtasks_icon)
-
+            // Показываем/скрываем иконки
             reminderIcon.visibility = if (task.hasReminder && !task.isCompleted) View.VISIBLE else View.GONE
             recurringIcon.visibility = if (task.isRecurring && !task.isCompleted) View.VISIBLE else View.GONE
             subtasksIcon.visibility = if (task.hasSubtasks && !task.isCompleted) View.VISIBLE else View.GONE
 
-            // Меняем прозрачность для выполненных задач
-            taskCard.alpha = if (task.isCompleted) 0.6f else 1.0f
+            // Устанавливаем contentDescription для доступности
+            taskCard.contentDescription = "Задача: ${task.title}"
         }
     }
 }

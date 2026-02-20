@@ -6,12 +6,17 @@ import android.os.Looper
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bountyapp.yourrtodo.adapter.CategoryAdapter
+import com.bountyapp.yourrtodo.callbacks.CategoryItemTouchCallback
+import com.bountyapp.yourrtodo.callbacks.CategorySwipeCallback
 import com.bountyapp.yourrtodo.fragments.FragmentAchievements
 import com.bountyapp.yourrtodo.fragments.FragmentCalendar
 import com.bountyapp.yourrtodo.fragments.FragmentHome
@@ -23,7 +28,10 @@ import com.bountyapp.yourrtodo.viewmodel.TasksViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class MainActivity : AppCompatActivity() {
+
+class MainActivity : AppCompatActivity(), CategorySwipeCallback {
+
+    private lateinit var categoryItemTouchHelper: ItemTouchHelper
 
     // UI элементы
     private lateinit var sidePanel: LinearLayout
@@ -51,6 +59,8 @@ class MainActivity : AppCompatActivity() {
     private var openPosition: Float = 0f
     private var shiftAmount: Float = 0f
     private var defaultMarginStart: Int = 0
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -142,14 +152,90 @@ class MainActivity : AppCompatActivity() {
                 },
                 onCreateCategory = { name, color ->
                     fragmentHome.addCategory(name, color)
+                },
+                onDeleteCategory = { category -> // Новый колбэк для удаления
+                    showDeleteCategoryConfirmationDialog(category)
                 }
             )
             categoriesRecyclerView.adapter = categoryAdapter
             fragmentHome.setCategoryAdapter(categoryAdapter!!)
+
+            // Добавляем обработчик свайпов для категорий
+            val callback = CategoryItemTouchCallback(this, ItemTouchHelper.RIGHT)
+            categoryItemTouchHelper = ItemTouchHelper(callback)
+            categoryItemTouchHelper.attachToRecyclerView(categoriesRecyclerView)
         } else {
             categoryAdapter?.updateCategories(currentCategories)
         }
     }
+
+    // Реализация метода интерфейса CategorySwipeCallback
+    override fun onCategorySwiped(position: Int) {
+        categoryAdapter?.let { adapter ->
+            val category = adapter.getCategoryAtPosition(position)
+            showDeleteCategoryConfirmationDialog(category, position)
+        }
+    }
+
+    private fun showDeleteCategoryConfirmationDialog(category: Category, position: Int? = null) {
+        // Запрещаем удаление категории "Все"
+        if (category.id == "all") {
+            if (position != null) {
+                categoryAdapter?.notifyItemChanged(position)
+            }
+            Toast.makeText(this, "Категорию \"Все\" нельзя удалить", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Удаление категории")
+            .setMessage("Вы уверены, что хотите удалить категорию \"${category.name}\"? Все задачи в этой категории также будут удалены.")
+            .setPositiveButton("Удалить") { _, _ ->
+                deleteCategory(category, position)
+            }
+            .setNegativeButton("Отмена") { _, _ ->
+                // Возвращаем элемент на место
+                if (position != null) {
+                    categoryAdapter?.notifyItemChanged(position)
+                }
+            }
+            .setOnCancelListener {
+                // Возвращаем элемент на место при отмене
+                if (position != null) {
+                    categoryAdapter?.notifyItemChanged(position)
+                }
+            }
+            .show()
+    }
+
+    private fun deleteCategory(category: Category, position: Int?) {
+        lifecycleScope.launch {
+            try {
+                // 1. Сначала удаляем все задачи и подзадачи этой категории
+                val tasksToDelete = tasksViewModel.getTasksByCategory(category.id)
+                for (task in tasksToDelete) {
+                    tasksViewModel.deleteTask(task.id)
+                }
+
+                // 2. Затем удаляем саму категорию
+                categoriesViewModel.deleteCategory(category.id)
+
+                // 3. Обновляем адаптер
+                if (position != null) {
+                    categoryAdapter?.removeCategory(position)
+                }
+
+                Toast.makeText(this@MainActivity, "Категория и все задачи удалены", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Ошибка при удалении: ${e.message}", Toast.LENGTH_SHORT).show()
+                // Возвращаем элемент на место в случае ошибки
+                if (position != null) {
+                    categoryAdapter?.notifyItemChanged(position)
+                }
+            }
+        }
+    }
+
 
     private fun toggleDrawer() {
         if (bottomNavigation.selectedItemId == R.id.nav_home) {

@@ -22,7 +22,8 @@ class CategoryAdapter(
     private var categories: List<Category>,
     private val onCategoryClick: (Category) -> Unit,
     private val onAddCategoryClick: () -> Unit,
-    private val onCreateCategory: (String, String) -> Unit
+    private val onCreateCategory: (String, String) -> Unit,
+    private val onDeleteCategory: (Category) -> Unit // Новый колбэк для удаления
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -81,6 +82,19 @@ class CategoryAdapter(
         }
     }
 
+    // Новый метод для получения категории по позиции
+    fun getCategoryAtPosition(position: Int): Category {
+        return categories[position]
+    }
+
+    // Новый метод для удаления категории
+    fun removeCategory(position: Int): Category {
+        val category = categories[position]
+        categories = categories.toMutableList().apply { removeAt(position) }
+        notifyItemRemoved(position)
+        return category
+    }
+
     fun enterAddingMode() {
         if (!isAddingMode) {
             isAddingMode = true
@@ -93,6 +107,11 @@ class CategoryAdapter(
             isAddingMode = false
             notifyItemRemoved(categories.size + 1)
         }
+    }
+
+    fun updateCategories(newCategories: List<Category>) {
+        categories = newCategories
+        notifyDataSetChanged()
     }
 
     inner class AddCategoryInputViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -247,9 +266,5 @@ class CategoryAdapter(
                 onCategoryClick(category)
             }
         }
-    }
-    fun updateCategories(newCategories: List<Category>) {  // Было MutableList<Category>
-        categories = newCategories
-        notifyDataSetChanged()
     }
 }
