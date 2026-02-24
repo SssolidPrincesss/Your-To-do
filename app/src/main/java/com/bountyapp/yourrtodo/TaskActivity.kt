@@ -520,9 +520,24 @@ class TaskActivity : AppCompatActivity() {
             hasChanges = true
             saveTask()
 
+            if (task.isCompleted) {
+                // Уведомляем о выполнении задачи
+                notifyTaskCompleted()
+            }
+
             val message = if (task.isCompleted) "Задача выполнена!" else "Задача возвращена в работу"
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun notifyTaskCompleted() {
+        // Отправляем broadcast или используем ViewModel
+        val intent = Intent()
+        intent.action = "TASK_COMPLETED"
+        sendBroadcast(intent)
+
+        // Или можно использовать локальный broadcast receiver
+        // Но лучше использовать SharedViewModel
     }
 
     private fun updateCompleteButtonState(isCompleted: Boolean) {

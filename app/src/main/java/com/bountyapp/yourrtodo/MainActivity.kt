@@ -3,6 +3,7 @@ package com.bountyapp.yourrtodo
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -22,12 +23,13 @@ import com.bountyapp.yourrtodo.fragments.FragmentCalendar
 import com.bountyapp.yourrtodo.fragments.FragmentHome
 import com.bountyapp.yourrtodo.fragments.FragmentSettings
 import com.bountyapp.yourrtodo.model.Category
+import com.bountyapp.yourrtodo.viewmodel.AchievementsViewModel
 import com.bountyapp.yourrtodo.viewmodel.CategoriesViewModel
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.bountyapp.yourrtodo.viewmodel.SharedEventViewModel
 import com.bountyapp.yourrtodo.viewmodel.TasksViewModel
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
 
 class MainActivity : AppCompatActivity(), CategorySwipeCallback {
 
@@ -48,6 +50,8 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
     // ViewModel
     private lateinit var categoriesViewModel: CategoriesViewModel
     private lateinit var tasksViewModel: TasksViewModel
+    private lateinit var achievementsViewModel: AchievementsViewModel
+    private lateinit var sharedEventViewModel: SharedEventViewModel
 
     // Константы для размеров
     private companion object {
@@ -60,30 +64,58 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
     private var shiftAmount: Float = 0f
     private var defaultMarginStart: Int = 0
 
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-
-        // Инициализация ViewModel
+        // Инициализация всех ViewModel
         categoriesViewModel = ViewModelProvider(this)[CategoriesViewModel::class.java]
         tasksViewModel = ViewModelProvider(this)[TasksViewModel::class.java]
+        achievementsViewModel = ViewModelProvider(this)[AchievementsViewModel::class.java]
+        sharedEventViewModel = ViewModelProvider(this)[SharedEventViewModel::class.java]
+
+        // Связываем TasksViewModel с SharedEventViewModel
+        tasksViewModel.setSharedEventViewModel(sharedEventViewModel)
+
+        // Наблюдаем за событиями выполнения задач
+        sharedEventViewModel.taskCompletedEvent.observe(this) { task ->
+            task?.let {
+                achievementsViewModel.onTaskCompleted()
+                Log.d("MainActivity", "Task completed: ${it.title}")
+            }
+        }
+
+        // Наблюдаем за событиями разблокировки достижений
+        sharedEventViewModel.achievementUnlockedEvent.observe(this) { achievementName ->
+            achievementName?.let {
+                Toast.makeText(this, "🏆 Достижение получено: $achievementName", Toast.LENGTH_LONG).show()
+            }
+        }
 
         // Инициализация UI элементов
         initViews()
 
-        // Настройка BottomNavigation
+        // Настройка BottomNavigation (БЕЗ установки selectedItemId)
         setupBottomNavigation()
 
-        // Загружаем главный фрагмент
-        fragmentHome = FragmentHome()
-        loadFragment(fragmentHome)
+        // Загружаем главный фрагмент ТОЛЬКО если нет сохраненного состояния
+        if (savedInstanceState == null) {
+            Log.d("MainActivity", "Creating initial FragmentHome")
+            fragmentHome = FragmentHome()
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, fragmentHome)
+                .commit()
+
+            // ДАЕМ ВРЕМЯ ФРАГМЕНТУ СОЗДАТЬСЯ, ЗАТЕМ НАСТРАИВАЕМ АДАПТЕР
+            Handler(Looper.getMainLooper()).postDelayed({
+                if (::fragmentHome.isInitialized) {
+                    setupCategoriesRecyclerView()
+                }
+            }, 200)
+        }
 
         // Наблюдаем за изменениями в ViewModel
         observeViewModel()
-
     }
 
     private fun observeViewModel() {
@@ -93,6 +125,12 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
                 categoryAdapter?.updateCategories(categories)
                 fragmentHome.refreshCategories()
             }
+        }
+
+        // Можно добавить наблюдение за достижениями, если нужно
+        achievementsViewModel.userStats.observe(this) { stats ->
+            // Если нужно отображать статистику где-то в MainActivity
+            Log.d("MainActivity", "User stats updated: ${stats?.totalPoints}")
         }
     }
 
@@ -141,7 +179,7 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
             categoryAdapter = CategoryAdapter(
                 categories = currentCategories,
                 onCategoryClick = { category ->
-                    android.util.Log.d("MainActivity", "Category clicked: ${category.name}")
+                    Log.d("MainActivity", "Category clicked: ${category.name}")
                     fragmentHome.selectCategory(category.id)
                     if (isDrawerOpen) {
                         updateDrawerState(false)
@@ -153,7 +191,7 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
                 onCreateCategory = { name, color ->
                     fragmentHome.addCategory(name, color)
                 },
-                onDeleteCategory = { category -> // Новый колбэк для удаления
+                onDeleteCategory = { category ->
                     showDeleteCategoryConfirmationDialog(category)
                 }
             )
@@ -236,7 +274,6 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
         }
     }
 
-
     private fun toggleDrawer() {
         if (bottomNavigation.selectedItemId == R.id.nav_home) {
             updateDrawerState(!isDrawerOpen)
@@ -307,34 +344,40 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
             when (item.itemId) {
                 R.id.nav_home -> {
                     showDrawer()
-
-                    val currentFragment = supportFragmentManager.findFragmentById(R.id.fragment_container)
-                    if (currentFragment !is FragmentHome) {
+                    if (supportFragmentManager.findFragmentById(R.id.fragment_container) !is FragmentHome) {
                         fragmentHome = FragmentHome()
-                        loadFragment(fragmentHome)
+                        supportFragmentManager.beginTransaction()
+                            .replace(R.id.fragment_container, fragmentHome)
+                            .commit()
                     }
                     true
                 }
                 R.id.nav_calendar -> {
                     hideDrawer()
-                    loadFragment(FragmentCalendar())
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragment_container, FragmentCalendar())
+                        .commit()
                     true
                 }
                 R.id.nav_achievements -> {
                     hideDrawer()
-                    loadFragment(FragmentAchievements())
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragment_container, FragmentAchievements())
+                        .commit()
                     true
                 }
                 R.id.nav_settings -> {
                     hideDrawer()
-                    loadFragment(FragmentSettings())
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragment_container, FragmentSettings())
+                        .commit()
                     true
                 }
                 else -> false
             }
         }
 
-        bottomNavigation.selectedItemId = R.id.nav_home
+        // НЕ устанавливаем selectedItemId здесь!
     }
 
     private fun showDrawer() {
@@ -366,25 +409,6 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
         isDrawerOpen = false
     }
 
-    private fun loadFragment(fragment: Fragment) {
-        if (fragment is FragmentHome) {
-            fragmentHome = fragment
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, fragment)
-                .commitAllowingStateLoss()
-
-            Handler(Looper.getMainLooper()).postDelayed({
-                if (::fragmentHome.isInitialized) {
-                    setupCategoriesRecyclerView()
-                }
-            }, 200)
-        } else {
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, fragment)
-                .commit()
-        }
-    }
-
     override fun onBackPressed() {
         if (bottomNavigation.selectedItemId == R.id.nav_home) {
             if (isDrawerOpen) {
@@ -398,7 +422,6 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
     }
 
     fun onFragmentReady() {
-        // Убираем Handler, используем lifecycleScope
         lifecycleScope.launch {
             delay(100)
             if (::fragmentHome.isInitialized && categoryAdapter != null) {
@@ -409,9 +432,7 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
 
     override fun onResume() {
         super.onResume()
-        // При возврате в MainActivity не сбрасываем категорию
         if (::fragmentHome.isInitialized) {
-            // Просто обновляем UI, но не меняем категорию
             fragmentHome.refreshCategories()
         }
     }

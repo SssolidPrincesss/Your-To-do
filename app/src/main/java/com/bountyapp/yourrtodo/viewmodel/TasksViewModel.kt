@@ -22,12 +22,20 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
     private val _error = MutableLiveData<String?>(null)
     val error: LiveData<String?> = _error
 
+    // Ссылка на SharedEventViewModel для отправки событий
+    private var sharedEventViewModel: SharedEventViewModel? = null
+
     init {
         // Инициализируем задачи при создании ViewModel
         viewModelScope.launch {
             repository.initDefaultTasks()
             loadTasks()
         }
+    }
+
+    // Метод для установки SharedEventViewModel (вызывается из MainActivity)
+    fun setSharedEventViewModel(viewModel: SharedEventViewModel) {
+        this.sharedEventViewModel = viewModel
     }
 
     private fun loadTasks() {
@@ -64,11 +72,23 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
         val currentTasks = _tasks.value ?: return null
         val task = currentTasks.find { it.id == taskId } ?: return null
 
+        val wasCompleted = task.isCompleted
         val updatedTask = task.copy(isCompleted = !task.isCompleted)
 
         viewModelScope.launch {
             try {
                 repository.saveTask(updatedTask)
+
+                // Если задача была выполнена (стала завершенной), отправляем события
+                if (!wasCompleted && updatedTask.isCompleted) {
+                    // Отправляем саму задачу
+                    sharedEventViewModel?.onTaskCompleted(updatedTask)
+
+                    // Отправляем очки за задачу
+                    val taskPoints = calculateTaskPoints(updatedTask)
+                    sharedEventViewModel?.onTaskPointsEarned(taskPoints)
+                }
+
             } catch (e: Exception) {
                 _error.value = "Ошибка изменения статуса: ${e.message}"
             }
@@ -76,6 +96,12 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
 
         return updatedTask
     }
+
+    private fun calculateTaskPoints(task: Task): Int {
+        var points = 5 // База
+        return points
+    }
+
 
     fun addTask(task: Task) {
         viewModelScope.launch {
