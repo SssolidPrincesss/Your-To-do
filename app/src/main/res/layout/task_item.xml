@@ -66,9 +66,9 @@
         <!-- ПРАВАЯ ЧАСТЬ -->
         <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical"
-            android:gravity="end">
+            android:gravity="center_vertical">
 
             <!-- Флажок выбора цвета -->
             <ImageButton

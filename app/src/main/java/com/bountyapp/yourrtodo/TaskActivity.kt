@@ -186,6 +186,9 @@ class TaskActivity : AppCompatActivity() {
             },
             onSubtaskClick = { subtask ->
                 showEditSubtaskDialog(subtask)
+            },
+            onDeleteClick = { subtask ->
+                deleteSubtask(subtask)
             }
         )
 

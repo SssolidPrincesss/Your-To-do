@@ -57,10 +57,11 @@
                 android:id="@+id/search_action_button"
                 android:layout_width="8dp"
                 android:layout_height="8dp"
-                android:layout_marginStart="8dp"
                 android:src="@drawable/ic_close"
                 android:contentDescription="Очистить поиск"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:layout_marginStart="8dp"/>
+
         </LinearLayout>
 
         <ImageView

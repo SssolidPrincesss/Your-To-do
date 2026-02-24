@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bountyapp.yourrtodo.R
@@ -13,7 +14,8 @@ import com.bountyapp.yourrtodo.model.Subtask
 class SubtaskAdapter(
     private var subtasks: MutableList<Subtask>,
     private val onSubtaskChecked: (Subtask) -> Unit,
-    private val onSubtaskClick: (Subtask) -> Unit
+    private val onSubtaskClick: (Subtask) -> Unit,
+    private val onDeleteClick: (Subtask) -> Unit   // новый параметр
 ) : RecyclerView.Adapter<SubtaskAdapter.SubtaskViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SubtaskViewHolder {
@@ -49,6 +51,7 @@ class SubtaskAdapter(
     inner class SubtaskViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val checkbox: CheckBox = itemView.findViewById(R.id.subtask_checkbox)
         private val title: TextView = itemView.findViewById(R.id.subtask_title)
+        private val btnDelete: ImageButton = itemView.findViewById(R.id.btn_delete_subtask)
 
         init {
             checkbox.setOnClickListener {
@@ -65,6 +68,13 @@ class SubtaskAdapter(
                 val position = adapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onSubtaskClick(subtasks[position])
+                }
+            }
+
+            btnDelete.setOnClickListener {
+                val position = adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    onDeleteClick(subtasks[position])
                 }
             }
         }
