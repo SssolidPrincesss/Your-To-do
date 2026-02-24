@@ -40,7 +40,7 @@ class TaskRepository(context: Context) {
                     flagColor = taskEntity.flagColor,
                     categoryId = taskEntity.categoryId,
                     notes = taskEntity.notes,
-                    reminderTime = taskEntity.reminderTime,
+                    reminderDateTime  = taskEntity.reminderTime,
                     recurrenceRule = taskEntity.recurrenceRule,
                     subtasks = subtasks.toMutableList()
                 )
@@ -63,7 +63,7 @@ class TaskRepository(context: Context) {
                 flagColor = task.flagColor,
                 categoryId = task.categoryId,
                 notes = task.notes,
-                reminderTime = task.reminderTime,
+                reminderTime = task.reminderDateTime,
                 recurrenceRule = task.recurrenceRule
             )
         )
@@ -112,7 +112,7 @@ class TaskRepository(context: Context) {
                 flagColor = "#FFC107",
                 categoryId = "work",  // Важно! Привязка к категории "Работа"
                 notes = "Подготовить отчет за прошлый год",
-                reminderTime = null,
+                reminderDateTime = null,
                 recurrenceRule = null,
                 subtasks = mutableListOf(
                     Subtask(id = "sub1", title = "Собрать данные", isCompleted = false, taskId = "1"),
@@ -132,7 +132,7 @@ class TaskRepository(context: Context) {
                 flagColor = "#4CAF50",
                 categoryId = "work",  // Важно! Привязка к категории "Работа"
                 notes = "Ежедневная проверка",
-                reminderTime = null,
+                reminderDateTime = null,
                 recurrenceRule = "DAILY",
                 subtasks = mutableListOf()
             )
@@ -151,7 +151,7 @@ class TaskRepository(context: Context) {
                 flagColor = "#2196F3",
                 categoryId = "shopping",  // Важно! Привязка к категории "Покупки"
                 notes = "Список покупок",
-                reminderTime = null,
+                reminderDateTime = null,
                 recurrenceRule = null,
                 subtasks = mutableListOf(
                     Subtask(id = "sub4", title = "Молоко", isCompleted = false, taskId = "3"),
@@ -174,7 +174,7 @@ class TaskRepository(context: Context) {
                 flagColor = "#9C27B0",
                 categoryId = "study",  // Важно! Привязка к категории "Учеба"
                 notes = "Подготовиться к экзаменам",
-                reminderTime = null,
+                reminderDateTime = null,
                 recurrenceRule = null,
                 subtasks = mutableListOf(
                     Subtask(id = "sub7", title = "Математика", isCompleted = false, taskId = "4"),
@@ -196,7 +196,7 @@ class TaskRepository(context: Context) {
                 flagColor = "#FF9800",
                 categoryId = "personal",  // Важно! Привязка к категории "Личное"
                 notes = "Поздравить с праздником",
-                reminderTime = null,
+                reminderDateTime = null,
                 recurrenceRule = null,
                 subtasks = mutableListOf()
             )

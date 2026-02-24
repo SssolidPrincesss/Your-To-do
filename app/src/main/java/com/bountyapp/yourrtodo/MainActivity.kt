@@ -1,5 +1,8 @@
 package com.bountyapp.yourrtodo
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -8,6 +11,7 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -69,6 +73,21 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
     private var lastProcessedTaskId: String? = null
     private var lastProcessedTime = 0L
     private val DEBOUNCE_TIME_MS = 1000L
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            Toast.makeText(this, "Разрешение на уведомления не получено", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun askNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,6 +103,8 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
         tasksViewModel.setAchievementsViewModel(achievementsViewModel)
         tasksViewModel.setSharedEventViewModel(sharedEventViewModel)
         achievementsViewModel.setSharedEventViewModel(sharedEventViewModel)
+
+        askNotificationPermission()
 
         // НАБЛЮДАЕМ ТОЛЬКО ЗА UI-СОБЫТИЯМИ
         observeUiEvents()

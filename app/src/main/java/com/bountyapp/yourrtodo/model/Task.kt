@@ -20,7 +20,7 @@ data class Task(
     val isSectionHeader: Boolean = false,
     val sectionTitle: String? = null,
     var notes: String? = null,
-    var reminderTime: Date? = null,
+    var reminderDateTime: Date? = null,
     var recurrenceRule: String? = null,
     val attachments: List<String> = emptyList(),
     var subtasks: MutableList<Subtask> = mutableListOf()
@@ -89,7 +89,7 @@ data class Task(
         isRecurring: Boolean = this.isRecurring,
         hasSubtasks: Boolean = this.hasSubtasks,
         notes: String? = this.notes,
-        reminderTime: Date? = this.reminderTime,
+        reminderTime: Date? = this.reminderDateTime,
         recurrenceRule: String? = this.recurrenceRule,
         subtasks: MutableList<Subtask> = this.subtasks
     ): Task {
@@ -106,7 +106,7 @@ data class Task(
             isSectionHeader = this.isSectionHeader,
             sectionTitle = this.sectionTitle,
             notes = notes,
-            reminderTime = reminderTime,
+            reminderDateTime = reminderDateTime,
             recurrenceRule = recurrenceRule,
             attachments = this.attachments,
             subtasks = subtasks

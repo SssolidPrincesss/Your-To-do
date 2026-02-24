@@ -268,7 +268,7 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
             flagColor = "#2196F3",
             categoryId = currentCategoryId,
             notes = null,
-            reminderTime = null,
+            reminderDateTime = null,
             recurrenceRule = null,
             subtasks = mutableListOf()
         )

@@ -23,14 +23,10 @@ import com.bountyapp.yourrtodo.model.Category
 import com.bountyapp.yourrtodo.model.Subtask
 import com.bountyapp.yourrtodo.model.Task
 import com.bountyapp.yourrtodo.viewmodel.CategoriesViewModel
+import java.text.SimpleDateFormat
 import java.util.*
 
 class TaskActivity : AppCompatActivity() {
-
-
-    private var hasReminder: Boolean = false
-    private var isRecurring: Boolean = false
-    private var hasSubtasks: Boolean = false
 
     private lateinit var binding: ActivityTaskBinding
     private lateinit var categoriesViewModel: CategoriesViewModel
@@ -242,7 +238,7 @@ class TaskActivity : AppCompatActivity() {
                 dueDate = task.dueDate
                 updateDueDateDisplay()
 
-                reminderTime = task.reminderTime
+                reminderTime = task.reminderDateTime
                 updateReminderDisplay()
 
                 recurrenceRule = task.recurrenceRule
@@ -290,8 +286,6 @@ class TaskActivity : AppCompatActivity() {
                         )
 
                         subtasks.add(newSubtask)
-                        // ВАЖНО: устанавливаем флаг hasSubtasks = true
-                        hasSubtasks = true
                         subtaskAdapter.updateSubtasks(subtasks)
 
                         hasChanges = true
@@ -315,8 +309,6 @@ class TaskActivity : AppCompatActivity() {
         val index = subtasks.indexOfFirst { it.id == subtask.id }
         if (index != -1) {
             subtasks.removeAt(index)
-            // Обновляем флаг hasSubtasks
-            hasSubtasks = subtasks.isNotEmpty()
             subtaskAdapter.updateSubtasks(subtasks)
             hasChanges = true
             scheduleAutoSave()
@@ -396,39 +388,45 @@ class TaskActivity : AppCompatActivity() {
 
     private fun updateDueDateDisplay() {
         binding.tvDueDate.text = dueDate?.let {
-            val format = java.text.SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+            val format = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
             format.format(it)
         } ?: "Нет срока"
     }
 
     private fun showReminderPicker() {
         val calendar = Calendar.getInstance()
-        reminderTime?.let {
-            calendar.time = it
-        }
+        reminderTime?.let { calendar.time = it }
 
-        TimePickerDialog(
+        // Сначала выбираем дату
+        DatePickerDialog(
             this,
-            { _, hourOfDay, minute ->
-                calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
-                calendar.set(Calendar.MINUTE, minute)
-                reminderTime = calendar.time
-                // ВАЖНО: устанавливаем флаг hasReminder = true
-                hasReminder = true
-                updateReminderDisplay()
-                hasChanges = true
-                scheduleAutoSave()
+            { _, year, month, dayOfMonth ->
+                calendar.set(year, month, dayOfMonth)
+                // Затем выбираем время
+                TimePickerDialog(
+                    this,
+                    { _, hourOfDay, minute ->
+                        calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                        calendar.set(Calendar.MINUTE, minute)
+                        reminderTime = calendar.time
+                        updateReminderDisplay()
+                        hasChanges = true
+                        scheduleAutoSave()
+                    },
+                    calendar.get(Calendar.HOUR_OF_DAY),
+                    calendar.get(Calendar.MINUTE),
+                    true
+                ).show()
             },
-            calendar.get(Calendar.HOUR_OF_DAY),
-            calendar.get(Calendar.MINUTE),
-            true
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
         ).show()
     }
 
-    // Добавьте метод для сброса напоминания
+    // Опциональный метод для сброса напоминания (можно вызвать из диалога)
     private fun clearReminder() {
         reminderTime = null
-        hasReminder = false
         updateReminderDisplay()
         hasChanges = true
         scheduleAutoSave()
@@ -436,8 +434,8 @@ class TaskActivity : AppCompatActivity() {
 
     private fun updateReminderDisplay() {
         binding.tvReminder.text = reminderTime?.let {
-            val format = java.text.SimpleDateFormat("HH:mm", Locale.getDefault())
-            "Напоминание в ${format.format(it)}"
+            val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+            "Напоминание: ${dateFormat.format(it)}"
         } ?: "Нет напоминания"
     }
 
@@ -461,8 +459,6 @@ class TaskActivity : AppCompatActivity() {
                     4 -> "YEARLY"
                     else -> null
                 }
-                // ВАЖНО: устанавливаем флаг isRecurring = true если выбрано повторение
-                isRecurring = recurrenceRule != null
                 updateRecurrenceDisplay()
                 hasChanges = true
                 scheduleAutoSave()
@@ -470,6 +466,7 @@ class TaskActivity : AppCompatActivity() {
             .setPositiveButton("ОК", null)
             .show()
     }
+
     private fun updateRecurrenceDisplay() {
         binding.tvRecurrence.text = when (recurrenceRule) {
             "DAILY" -> "Каждый день"
@@ -520,24 +517,9 @@ class TaskActivity : AppCompatActivity() {
             hasChanges = true
             saveTask()
 
-            if (task.isCompleted) {
-                // Уведомляем о выполнении задачи
-                notifyTaskCompleted()
-            }
-
             val message = if (task.isCompleted) "Задача выполнена!" else "Задача возвращена в работу"
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         }
-    }
-
-    private fun notifyTaskCompleted() {
-        // Отправляем broadcast или используем ViewModel
-        val intent = Intent()
-        intent.action = "TASK_COMPLETED"
-        sendBroadcast(intent)
-
-        // Или можно использовать локальный broadcast receiver
-        // Но лучше использовать SharedViewModel
     }
 
     private fun updateCompleteButtonState(isCompleted: Boolean) {
@@ -561,12 +543,12 @@ class TaskActivity : AppCompatActivity() {
         currentTask?.let { task ->
             task.title = title
             task.dueDate = dueDate
-            task.reminderTime = reminderTime
+            task.reminderDateTime = reminderTime
             task.recurrenceRule = recurrenceRule
             task.notes = notes
             task.categoryId = selectedCategory?.id ?: "all"
 
-            // ВАЖНО: устанавливаем флаги на основе текущего состояния
+            // Устанавливаем флаги на основе текущего состояния
             task.hasReminder = reminderTime != null
             task.isRecurring = recurrenceRule != null
             task.hasSubtasks = subtasks.isNotEmpty()
@@ -586,8 +568,9 @@ class TaskActivity : AppCompatActivity() {
     }
 
     private fun saveAndExit() {
-        saveTask()
-        finish()
+        if (saveTask()) {
+            finish()
+        }
     }
 
     override fun onPause() {

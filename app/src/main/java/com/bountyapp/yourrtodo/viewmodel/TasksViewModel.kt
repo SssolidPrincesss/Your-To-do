@@ -7,6 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.bountyapp.yourrtodo.data.repository.TaskRepository
 import com.bountyapp.yourrtodo.model.Task
+import com.bountyapp.yourrtodo.utils.ReminderScheduler
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Date
@@ -65,14 +66,25 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                // Сначала отменяем старое напоминание (если было)
+                getTaskById(updatedTask.id)?.reminderDateTime?.let {
+                    ReminderScheduler.cancelReminder(getApplication(), updatedTask.id)
+                }
+
                 repository.saveTask(updatedTask)
                 _isLoading.value = false
+
+                // Планируем новое напоминание
+                updatedTask.reminderDateTime?.let {
+                    ReminderScheduler.scheduleReminder(getApplication(), updatedTask.id, updatedTask.title, it)
+                }
             } catch (e: Exception) {
                 _error.value = "Ошибка обновления задачи: ${e.message}"
                 _isLoading.value = false
             }
         }
     }
+
 
     fun toggleTaskCompletion(taskId: String): Task? {
         val currentTasks = _tasks.value ?: return null
@@ -169,6 +181,11 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
                 repository.saveTask(task)
                 _isLoading.value = false
                 sharedEventViewModel?.showTaskCreated(task.title)
+
+                // Планируем напоминание, если задано
+                task.reminderDateTime?.let {
+                    ReminderScheduler.scheduleReminder(getApplication(), task.id, task.title, it)
+                }
             } catch (e: Exception) {
                 _error.value = "Ошибка добавления задачи: ${e.message}"
                 _isLoading.value = false
@@ -180,10 +197,14 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val task = getTaskById(taskId)
+                // Отменяем напоминание
+                getTaskById(taskId)?.reminderDateTime?.let {
+                    ReminderScheduler.cancelReminder(getApplication(), taskId)
+                }
+
                 repository.deleteTask(taskId)
                 _isLoading.value = false
-                task?.let {
+                getTaskById(taskId)?.let {
                     sharedEventViewModel?.showTaskDeleted(it.title)
                 }
             } catch (e: Exception) {
