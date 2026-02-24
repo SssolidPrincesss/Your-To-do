@@ -278,84 +278,156 @@ class AchievementRepository(private val context: Context) {
      */
     private fun getDefaultAchievements(): List<AchievementEntity> {
         return listOf(
-            // Задач за день
+            // ===== ДОСТИЖЕНИЯ ЗА ЗАДАЧИ В ДЕНЬ (DAILY_TASKS) =====
             AchievementEntity(
                 name = "Первые шаги",
                 description = "Выполните 2 задачи за один день. Первые шаги!",
                 pointsReward = 5,
                 type = AchievementType.DAILY_TASKS,
-                requirement = 2,
-                iconResId = null // Можно добавить позже
+                requirement = 2
             ),
             AchievementEntity(
                 name = "Входим в ритм",
                 description = "Выполните 5 задач за день. Входим в ритм!",
                 pointsReward = 15,
                 type = AchievementType.DAILY_TASKS,
-                requirement = 5,
-                iconResId = null
-            ),
-            // Серии дней
-            AchievementEntity(
-                name = "Первый шаг",
-                description = "Посещайте приложение 5 дней подряд. Путешествие начинается!",
-                pointsReward = 10,
-                type = AchievementType.STREAK_DAYS,
-                requirement = 5,
-                iconResId = null
-            ),
-            AchievementEntity(
-                name = "Привычка формируется",
-                description = "Посещайте приложение 10 дней подряд. Вы строите привычку!",
-                pointsReward = 25,
-                type = AchievementType.STREAK_DAYS,
-                requirement = 10,
-                iconResId = null
-            ),
-            AchievementEntity(
-                name = "Суперсила последовательности",
-                description = "Посещайте приложение 25 дней подряд. Последовательность - ваша суперсила!",
-                pointsReward = 50,
-                type = AchievementType.STREAK_DAYS,
-                requirement = 25,
-                iconResId = null
-            ),
-            // Всего задач
-            AchievementEntity(
-                name = "Добро пожаловать в клуб",
-                description = "Выполните всего 10 задач. Добро пожаловать в клуб!",
-                pointsReward = 10,
-                type = AchievementType.TOTAL_TASKS,
-                requirement = 10,
-                iconResId = null
-            ),
-            // Дополнительные достижения
-            AchievementEntity(
-                name = "Труженик",
-                description = "Выполните всего 25 задач",
-                pointsReward = 25,
-                type = AchievementType.TOTAL_TASKS,
-                requirement = 25,
-                iconResId = null
+                requirement = 5
             ),
             AchievementEntity(
                 name = "Продуктивный день",
                 description = "Выполните 10 задач за один день",
                 pointsReward = 30,
                 type = AchievementType.DAILY_TASKS,
-                requirement = 10,
-                iconResId = null
+                requirement = 10
             ),
             AchievementEntity(
-                name = "Мастер продуктивности",
-                description = "Достигните 7-дневной серии",
-                pointsReward = 35,
+                name = "Сама продуктивность",
+                description = "Выполните 15 задач за один день",
+                pointsReward = 45,
+                type = AchievementType.DAILY_TASKS,
+                requirement = 15
+            ),
+
+            // ===== ДОСТИЖЕНИЯ ЗА СЕРИЮ ДНЕЙ (STREAK_DAYS) =====
+            // Переработаны: теперь учитывается выполнение хотя бы одной задачи каждый день
+            AchievementEntity(
+                name = "Первая искра",
+                description = "Выполняйте задачи 2 дня подряд",
+                pointsReward = 5,
                 type = AchievementType.STREAK_DAYS,
-                requirement = 7,
-                iconResId = null
+                requirement = 2
+            ),
+            AchievementEntity(
+                name = "Ритм",
+                description = "Выполняйте задачи 5 дней подряд",
+                pointsReward = 10,
+                type = AchievementType.STREAK_DAYS,
+                requirement = 5
+            ),
+            AchievementEntity(
+                name = "Привычка",
+                description = "Выполняйте задачи 10 дней подряд",
+                pointsReward = 25,
+                type = AchievementType.STREAK_DAYS,
+                requirement = 10
+            ),
+            AchievementEntity(
+                name = "Внушительная серия",
+                description = "Выполняйте задачи 15 дней подряд",
+                pointsReward = 40,
+                type = AchievementType.STREAK_DAYS,
+                requirement = 15
+            ),
+            AchievementEntity(
+                name = "Мастер последовательности",
+                description = "Выполняйте задачи 25 дней подряд",
+                pointsReward = 60,
+                type = AchievementType.STREAK_DAYS,
+                requirement = 25
+            ),
+            AchievementEntity(
+                name = "Месячная серия",
+                description = "Выполняйте задачи 30 дней подряд",
+                pointsReward = 80,
+                type = AchievementType.STREAK_DAYS,
+                requirement = 30
+            ),
+            AchievementEntity(
+                name = "Железная воля",
+                description = "Выполняйте задачи 50 дней подряд",
+                pointsReward = 120,
+                type = AchievementType.STREAK_DAYS,
+                requirement = 50
+            ),
+            AchievementEntity(
+                name = "Неудержимый",
+                description = "Выполняйте задачи 75 дней подряд",
+                pointsReward = 180,
+                type = AchievementType.STREAK_DAYS,
+                requirement = 75
+            ),
+            AchievementEntity(
+                name = "Бессмертный",
+                description = "Выполняйте задачи 100 дней подряд",
+                pointsReward = 250,
+                type = AchievementType.STREAK_DAYS,
+                requirement = 100
+            ),
+
+            // ===== ДОСТИЖЕНИЯ ЗА ОБЩЕЕ КОЛИЧЕСТВО ЗАДАЧ (TOTAL_TASKS) =====
+            AchievementEntity(
+                name = "Добро пожаловать в клуб",
+                description = "Выполните всего 10 задач. Добро пожаловать в клуб!",
+                pointsReward = 10,
+                type = AchievementType.TOTAL_TASKS,
+                requirement = 10
+            ),
+            AchievementEntity(
+                name = "Труженик",
+                description = "Выполните всего 25 задач",
+                pointsReward = 25,
+                type = AchievementType.TOTAL_TASKS,
+                requirement = 25
+            ),
+            // Новые достижения
+            AchievementEntity(
+                name = "Активист",
+                description = "Выполните всего 50 задач",
+                pointsReward = 40,
+                type = AchievementType.TOTAL_TASKS,
+                requirement = 50
+            ),
+            AchievementEntity(
+                name = "Герой труда",
+                description = "Выполните всего 100 задач",
+                pointsReward = 75,
+                type = AchievementType.TOTAL_TASKS,
+                requirement = 100
+            ),
+            AchievementEntity(
+                name = "Легендарный труд",
+                description = "Выполните всего 1000 задач",
+                pointsReward = 200,
+                type = AchievementType.TOTAL_TASKS,
+                requirement = 1000
+            ),
+            AchievementEntity(
+                name = "Мистер продуктивность",
+                description = "Выполните всего 10000 задач",
+                pointsReward = 500,
+                type = AchievementType.TOTAL_TASKS,
+                requirement = 10000
+            ),
+            AchievementEntity(
+                name = "Бог продуктивности",
+                description = "Выполните всего 50000 задач",
+                pointsReward = 2500,
+                type = AchievementType.TOTAL_TASKS,
+                requirement = 50000
             )
         )
     }
+
 
     /**
      * Сброс ежедневного счетчика (можно вызывать каждый день)
