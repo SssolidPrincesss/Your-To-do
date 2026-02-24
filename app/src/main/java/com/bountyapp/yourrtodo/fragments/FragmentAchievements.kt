@@ -221,8 +221,7 @@ class FragmentAchievements : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // При возвращении на фрагмент принудительно обновляем данные
-        viewModel.loadData() // Если такого метода нет, создайте его
+        viewModel.forceRefresh()  // было viewModel.loadData()
     }
 
 }

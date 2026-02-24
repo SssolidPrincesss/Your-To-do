@@ -72,8 +72,9 @@ class AchievementsViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    private suspend fun loadDataInternal() {
-        try {
+    private fun loadDataInternal() {
+        // Загружаем достижения
+        viewModelScope.launch {
             repository.getAllAchievements().collect { list ->
                 _achievements.postValue(list)
                 _unlockedAchievements.postValue(list.filter { it.isUnlocked })
@@ -87,7 +88,10 @@ class AchievementsViewModel(application: Application) : AndroidViewModel(applica
 
                 Log.d("AchievementsVM", "Loaded ${list.size} achievements")
             }
+        }
 
+        // Загружаем статистику пользователя
+        viewModelScope.launch {
             repository.getUserStats().collect { stats ->
                 _userStats.postValue(stats)
                 stats?.let {
@@ -95,11 +99,8 @@ class AchievementsViewModel(application: Application) : AndroidViewModel(applica
                     updateStatusInfo(it.totalPoints)
                 }
             }
-        } catch (e: Exception) {
-            Log.e("AchievementsVM", "Error loading data", e)
         }
     }
-
     private suspend fun updateStatusInfo(points: Int) {
         _currentStatus.postValue(repository.getCurrentStatus())
         _nextStatus.postValue(repository.getNextStatus())
