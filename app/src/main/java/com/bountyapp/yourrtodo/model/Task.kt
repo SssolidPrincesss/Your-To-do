@@ -15,7 +15,7 @@ data class Task(
     var hasReminder: Boolean = false,
     var isRecurring: Boolean = false,
     var hasSubtasks: Boolean = false,
-    val flagColor: String = "#FFC107",
+    val flagColor: String = "#808080",
     var categoryId: String = "all",
     val isSectionHeader: Boolean = false,
     val sectionTitle: String? = null,
@@ -73,14 +73,6 @@ data class Task(
         return isSameDay(tomorrow, cal2)
     }
 
-    fun calculatePoints(): Int {
-        var points = 10
-        if (hasReminder) points += 5
-        if (isRecurring) points += 3
-        if (hasSubtasks) points += 7
-        if (isOverdue) points -= 3
-        return points
-    }
 
     fun copy(
         isCompleted: Boolean = this.isCompleted,

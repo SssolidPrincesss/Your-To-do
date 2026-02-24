@@ -29,6 +29,7 @@ import com.bountyapp.yourrtodo.adapter.CategoryAdapter
 import com.bountyapp.yourrtodo.adapter.TaskAdapter
 import com.bountyapp.yourrtodo.callbacks.TaskItemTouchCallback
 import com.bountyapp.yourrtodo.callbacks.TaskSwipeCallback
+import com.bountyapp.yourrtodo.dialogs.ColorPickerDialogFragment
 import com.bountyapp.yourrtodo.model.Category
 import com.bountyapp.yourrtodo.model.Task
 import com.bountyapp.yourrtodo.viewmodel.AchievementsViewModel
@@ -201,7 +202,8 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
             context = requireContext(),
             originalTasks = emptyList(),
             onTaskChecked = ::handleTaskCompletion,
-            onTaskClick = { task -> openTaskForEdit(task) }
+            onTaskClick = { task -> openTaskForEdit(task) },
+            onFlagClick = { task -> showColorPicker(task) }
         )
         recyclerView.adapter = taskAdapter
 
@@ -209,6 +211,7 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
         itemTouchHelper = ItemTouchHelper(callback)
         itemTouchHelper.attachToRecyclerView(recyclerView)
     }
+
 
     override fun onTaskSwiped(position: Int) {
         if (position < 0 || position >= taskAdapter.itemCount) {
@@ -265,7 +268,7 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
             hasReminder = false,
             isRecurring = false,
             hasSubtasks = false,
-            flagColor = "#2196F3",
+            flagColor = "#808080",
             categoryId = currentCategoryId,
             notes = null,
             reminderDateTime = null,
@@ -387,6 +390,15 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
             }
             override fun afterTextChanged(s: Editable?) {}
         })
+    }
+
+    private fun showColorPicker(task: Task) {
+        val dialog = ColorPickerDialogFragment.newInstance(task.flagColor) { newColorHex ->
+            val updatedTask = task.copy(flagColor = newColorHex)
+            tasksViewModel.updateTask(updatedTask)
+            // Можно показать уведомление, но не обязательно
+        }
+        dialog.show(parentFragmentManager, "colorPicker")
     }
 
     private fun enterSearchMode() {
