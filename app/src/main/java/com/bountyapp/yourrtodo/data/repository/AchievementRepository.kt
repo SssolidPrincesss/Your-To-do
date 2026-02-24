@@ -15,6 +15,10 @@ class AchievementRepository(private val context: Context) {
     private val database = AppDatabase.getInstance(context)
     private val achievementDao = database.achievementDao()
 
+    // Для защиты от повторных вызовов
+    private var lastTaskCompletionTime = 0L
+    private val DEBOUNCE_TIME_MS = 500L
+
     suspend fun initializeAchievements() {
         val achievements = achievementDao.getAllAchievements().firstOrNull()
         if (achievements.isNullOrEmpty()) {
@@ -81,8 +85,25 @@ class AchievementRepository(private val context: Context) {
         }
     }
 
-    suspend fun onTaskCompleted(taskPoints: Int = 5): List<AchievementEntity> {
+    /**
+     * Обрабатывает выполнение задачи и начисление очков
+     * @param taskPoints количество очков за задачу (по умолчанию 5)
+     * @param taskId ID задачи для защиты от дублирования (опционально)
+     * @return список только что разблокированных достижений
+     */
+    suspend fun onTaskCompleted(taskPoints: Int = 5, taskId: String? = null): List<AchievementEntity> {
+        val currentTime = System.currentTimeMillis()
+
+        // Защита от слишком частых вызовов
+        if (currentTime - lastTaskCompletionTime < DEBOUNCE_TIME_MS) {
+            Log.d("AchievementRepo", "Task completed too recently (${currentTime - lastTaskCompletionTime}ms), skipping duplicate")
+            return emptyList()
+        }
+
+        lastTaskCompletionTime = currentTime
+
         Log.d("AchievementRepo", "========== onTaskCompleted START ==========")
+        Log.d("AchievementRepo", "Task points: $taskPoints, taskId: $taskId")
 
         // Получаем текущую статистику
         val currentStats = achievementDao.getUserStats().firstOrNull()
@@ -93,6 +114,26 @@ class AchievementRepository(private val context: Context) {
             }
 
         Log.d("AchievementRepo", "Before update: points=${currentStats.totalPoints}, streak=${currentStats.currentStreak}, daily=${currentStats.dailyTaskCount}, total=${currentStats.totalTasksCompleted}")
+
+        // Обновляем статистику и получаем обновленную версию
+        val (updatedStats, oldStats) = updateUserStats(currentStats, taskPoints)
+
+        // Проверяем достижения на основе изменений
+        val achievements = achievementDao.getAllAchievements().firstOrNull() ?: emptyList()
+        val newlyUnlocked = checkAndUpdateAchievements(achievements, oldStats, updatedStats)
+
+        Log.d("AchievementRepo", "========== onTaskCompleted END ==========")
+        return newlyUnlocked
+    }
+
+    /**
+     * Обновляет статистику пользователя с учетом дня
+     * @return Pair(обновленная статистика, старая статистика)
+     */
+    private suspend fun updateUserStats(
+        currentStats: UserStatsEntity,
+        taskPoints: Int
+    ): Pair<UserStatsEntity, UserStatsEntity> {
 
         val currentDate = System.currentTimeMillis()
         val calendar = java.util.Calendar.getInstance()
@@ -151,14 +192,13 @@ class AchievementRepository(private val context: Context) {
         val savedStats = achievementDao.getUserStats().firstOrNull()
         Log.d("AchievementRepo", "Verified saved stats: points=${savedStats?.totalPoints}")
 
-        // Проверяем достижения
-        val achievements = achievementDao.getAllAchievements().firstOrNull() ?: emptyList()
-        val newlyUnlocked = checkAndUpdateAchievements(achievements, oldStats, updatedStats)
-
-        Log.d("AchievementRepo", "========== onTaskCompleted END ==========")
-        return newlyUnlocked
+        return Pair(updatedStats, oldStats)
     }
 
+    /**
+     * Проверяет и обновляет достижения на основе изменений в статистике
+     * @return список только что разблокированных достижений
+     */
     private suspend fun checkAndUpdateAchievements(
         achievements: List<AchievementEntity>,
         oldStats: UserStatsEntity,
@@ -195,6 +235,7 @@ class AchievementRepository(private val context: Context) {
             }
         }
 
+        // Если есть новые достижения, добавляем их очки к общей сумме
         if (totalPointsEarned > 0) {
             Log.d("AchievementRepo", "Total points earned from new achievements: $totalPointsEarned")
 
@@ -219,6 +260,9 @@ class AchievementRepository(private val context: Context) {
         return unlockedAchievements
     }
 
+    /**
+     * Проверяет, выполнено ли достижение на основе текущей статистики
+     */
     private fun isAchievementCompleted(achievement: AchievementEntity, stats: UserStatsEntity): Boolean {
         return when (achievement.type) {
             AchievementType.STREAK_DAYS -> stats.currentStreak >= achievement.requirement
@@ -229,6 +273,9 @@ class AchievementRepository(private val context: Context) {
         }
     }
 
+    /**
+     * Возвращает список достижений по умолчанию
+     */
     private fun getDefaultAchievements(): List<AchievementEntity> {
         return listOf(
             // Задач за день
@@ -237,14 +284,16 @@ class AchievementRepository(private val context: Context) {
                 description = "Выполните 2 задачи за один день. Первые шаги!",
                 pointsReward = 5,
                 type = AchievementType.DAILY_TASKS,
-                requirement = 2
+                requirement = 2,
+                iconResId = null // Можно добавить позже
             ),
             AchievementEntity(
                 name = "Входим в ритм",
                 description = "Выполните 5 задач за день. Входим в ритм!",
                 pointsReward = 15,
                 type = AchievementType.DAILY_TASKS,
-                requirement = 5
+                requirement = 5,
+                iconResId = null
             ),
             // Серии дней
             AchievementEntity(
@@ -252,21 +301,24 @@ class AchievementRepository(private val context: Context) {
                 description = "Посещайте приложение 5 дней подряд. Путешествие начинается!",
                 pointsReward = 10,
                 type = AchievementType.STREAK_DAYS,
-                requirement = 5
+                requirement = 5,
+                iconResId = null
             ),
             AchievementEntity(
                 name = "Привычка формируется",
                 description = "Посещайте приложение 10 дней подряд. Вы строите привычку!",
                 pointsReward = 25,
                 type = AchievementType.STREAK_DAYS,
-                requirement = 10
+                requirement = 10,
+                iconResId = null
             ),
             AchievementEntity(
                 name = "Суперсила последовательности",
                 description = "Посещайте приложение 25 дней подряд. Последовательность - ваша суперсила!",
                 pointsReward = 50,
                 type = AchievementType.STREAK_DAYS,
-                requirement = 25
+                requirement = 25,
+                iconResId = null
             ),
             // Всего задач
             AchievementEntity(
@@ -274,8 +326,60 @@ class AchievementRepository(private val context: Context) {
                 description = "Выполните всего 10 задач. Добро пожаловать в клуб!",
                 pointsReward = 10,
                 type = AchievementType.TOTAL_TASKS,
-                requirement = 10
+                requirement = 10,
+                iconResId = null
+            ),
+            // Дополнительные достижения
+            AchievementEntity(
+                name = "Труженик",
+                description = "Выполните всего 25 задач",
+                pointsReward = 25,
+                type = AchievementType.TOTAL_TASKS,
+                requirement = 25,
+                iconResId = null
+            ),
+            AchievementEntity(
+                name = "Продуктивный день",
+                description = "Выполните 10 задач за один день",
+                pointsReward = 30,
+                type = AchievementType.DAILY_TASKS,
+                requirement = 10,
+                iconResId = null
+            ),
+            AchievementEntity(
+                name = "Мастер продуктивности",
+                description = "Достигните 7-дневной серии",
+                pointsReward = 35,
+                type = AchievementType.STREAK_DAYS,
+                requirement = 7,
+                iconResId = null
             )
         )
+    }
+
+    /**
+     * Сброс ежедневного счетчика (можно вызывать каждый день)
+     */
+    suspend fun resetDailyIfNeeded() {
+        val stats = achievementDao.getUserStats().firstOrNull() ?: return
+
+        val calendar = java.util.Calendar.getInstance()
+        calendar.timeInMillis = stats.currentDate
+        val lastDay = calendar.get(java.util.Calendar.DAY_OF_YEAR)
+        val lastYear = calendar.get(java.util.Calendar.YEAR)
+
+        calendar.timeInMillis = System.currentTimeMillis()
+        val today = calendar.get(java.util.Calendar.DAY_OF_YEAR)
+        val currentYear = calendar.get(java.util.Calendar.YEAR)
+
+        if (today != lastDay || currentYear != lastYear) {
+            // Сбрасываем dailyTaskCount, но сохраняем streak если нужно
+            val updatedStats = stats.copy(
+                dailyTaskCount = 0,
+                currentDate = System.currentTimeMillis()
+            )
+            achievementDao.updateUserStats(updatedStats)
+            Log.d("AchievementRepo", "Daily counter reset")
+        }
     }
 }

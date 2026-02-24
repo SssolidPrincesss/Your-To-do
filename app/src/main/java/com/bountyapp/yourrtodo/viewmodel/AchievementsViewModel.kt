@@ -10,12 +10,16 @@ import com.bountyapp.yourrtodo.data.entities.AchievementEntity
 import com.bountyapp.yourrtodo.data.entities.UserStatsEntity
 import com.bountyapp.yourrtodo.data.repository.AchievementRepository
 import com.bountyapp.yourrtodo.model.UserStatus
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 class AchievementsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = AchievementRepository(application.applicationContext)
+
+    // Ссылка на SharedEventViewModel
+    private var sharedEventViewModel: SharedEventViewModel? = null
 
     private val _achievements = MutableLiveData<List<AchievementEntity>>()
     val achievements: LiveData<List<AchievementEntity>> = _achievements
@@ -44,12 +48,22 @@ class AchievementsViewModel(application: Application) : AndroidViewModel(applica
     private val _unlockedAchievementMessage = MutableLiveData<AchievementEntity?>()
     val unlockedAchievementMessage: LiveData<AchievementEntity?> = _unlockedAchievementMessage
 
+    // Флаг для защиты от повторных вызовов
+    private var isProcessingTaskCompletion = false
+    private var lastProcessedTaskId: String? = null
+    private var lastProcessedTime = 0L
+    private val DEBOUNCE_TIME_MS = 1000L
+
     init {
         viewModelScope.launch {
             repository.initializeAchievements()
             repository.initializeUserStats()
             loadData()
         }
+    }
+
+    fun setSharedEventViewModel(viewModel: SharedEventViewModel) {
+        this.sharedEventViewModel = viewModel
     }
 
     fun loadData() {
@@ -92,18 +106,34 @@ class AchievementsViewModel(application: Application) : AndroidViewModel(applica
         _pointsToNextStatus.postValue(repository.getPointsToNextStatus())
     }
 
-    fun onTaskCompleted() {
+    // НОВЫЙ МЕТОД - прямое добавление очков из TasksViewModel
+    fun addPoints(points: Int, taskId: String? = null) {
         viewModelScope.launch {
             try {
-                Log.d("AchievementsVM", "=== TASK COMPLETED EVENT RECEIVED ===")
+                // Защита от повторных вызовов
+                val currentTime = System.currentTimeMillis()
 
-                val oldStats = _userStats.value
-                Log.d("AchievementsVM", "Old stats points: ${oldStats?.totalPoints}")
+                if (isProcessingTaskCompletion) {
+                    Log.d("AchievementsVM", "Already processing, skipping")
+                    return@launch
+                }
+
+                if (taskId != null && taskId == lastProcessedTaskId &&
+                    currentTime - lastProcessedTime < DEBOUNCE_TIME_MS) {
+                    Log.d("AchievementsVM", "Task $taskId was recently processed, skipping")
+                    return@launch
+                }
+
+                isProcessingTaskCompletion = true
+                lastProcessedTaskId = taskId
+                lastProcessedTime = currentTime
+
+                Log.d("AchievementsVM", "Adding $points points for task completion")
 
                 // Вызываем репозиторий и получаем список разблокированных достижений
-                val newlyUnlocked = repository.onTaskCompleted()
+                val newlyUnlocked = repository.onTaskCompleted(points)
 
-                // Принудительно обновляем данные
+                // Обновляем данные
                 forceRefresh()
 
                 // Показываем сообщения о новых достижениях
@@ -112,18 +142,31 @@ class AchievementsViewModel(application: Application) : AndroidViewModel(applica
                     newlyUnlocked.forEach { achievement ->
                         Log.d("AchievementsVM", "  - ${achievement.name} (+${achievement.pointsReward})")
                         _unlockedAchievementMessage.postValue(achievement)
+
+                        // Отправляем UI-событие о достижении
+                        sharedEventViewModel?.showAchievementUnlocked(
+                            achievement.name,
+                            achievement.pointsReward
+                        )
                     }
                 }
 
-                val finalStats = _userStats.value
-                Log.d("AchievementsVM", "Final stats points: ${finalStats?.totalPoints}")
-
             } catch (e: Exception) {
-                Log.e("AchievementsVM", "Error in onTaskCompleted", e)
+                Log.e("AchievementsVM", "Error adding points", e)
+            } finally {
+                // Сбрасываем флаг
+                viewModelScope.launch {
+                    delay(500)
+                    isProcessingTaskCompletion = false
+                }
             }
         }
     }
 
+    // Сохраняем старый метод для обратной совместимости, но теперь он вызывает новый
+    fun onTaskCompleted(taskId: String? = null) {
+        addPoints(5, taskId)
+    }
 
     fun clearUnlockedMessage() {
         _unlockedAchievementMessage.postValue(null)

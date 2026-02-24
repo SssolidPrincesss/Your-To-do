@@ -76,44 +76,6 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
         const val REQUEST_CREATE_TASK = 1002
     }
 
-    // Лаунчер для редактирования существующих задач
-    private val taskResultLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.getParcelableExtra<Task>(TaskActivity.EXTRA_TASK)?.let { updatedTask ->
-                val oldTask = tasksViewModel.getTaskById(updatedTask.id)
-                val wasCompleted = oldTask?.isCompleted ?: false
-                val isNowCompleted = updatedTask.isCompleted
-
-                tasksViewModel.updateTask(updatedTask)
-                Toast.makeText(requireContext(), "Задача обновлена", Toast.LENGTH_SHORT).show()
-
-                // Отправляем событие об обновлении задачи
-                sharedEventViewModel.onTaskUpdated(updatedTask)
-
-                if (!wasCompleted && isNowCompleted) {
-                    sharedEventViewModel.onTaskCompleted(updatedTask)
-                }
-            }
-        }
-    }
-
-    // Лаунчер для создания новых задач
-    private val taskCreateLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.getParcelableExtra<Task>(TaskActivity.EXTRA_TASK)?.let { newTask ->
-                tasksViewModel.addTask(newTask)
-                Toast.makeText(requireContext(), "Задача создана", Toast.LENGTH_SHORT).show()
-
-                // Отправляем событие о создании задачи
-                sharedEventViewModel.onTaskCreated(newTask)
-            }
-        }
-    }
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -133,14 +95,31 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
         // Наблюдаем за ViewModel
         observeViewModels()
 
-        // ВСЕГДА наблюдаем за общими событиями, но используем viewLifecycleOwner
-        Log.d("FragmentHome", "Setting up shared event observers")
-        observeSharedEvents()
+        // Наблюдаем только за UI-событиями (тосты уже в MainActivity, но можно и здесь)
+        observeUiEvents()
 
         // Уведомляем активность, что фрагмент готов
         lifecycleScope.launch {
             delay(100)
             (activity as? MainActivity)?.onFragmentReady()
+        }
+    }
+    private fun observeUiEvents() {
+        // Можно наблюдать за тостами здесь, если хотите показывать их по-разному
+        // Но обычно тосты удобнее показывать в MainActivity
+
+        // Для примера - наблюдаем за событиями выполнения задач
+        sharedEventViewModel.taskCompletedEvent.observe(viewLifecycleOwner) { event ->
+            event?.let { (title, points) ->
+                Log.d("FragmentHome", "Task completed UI: $title +$points")
+                // Здесь можно обновить анимацию или какой-то UI элемент
+            }
+        }
+
+        sharedEventViewModel.taskUncompletedEvent.observe(viewLifecycleOwner) { title ->
+            title?.let {
+                Log.d("FragmentHome", "Task uncompleted: $it")
+            }
         }
     }
 
@@ -198,39 +177,6 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
         tasksViewModel.tasks.observe(viewLifecycleOwner) { taskList ->
             Log.d("FragmentHome", "Tasks updated: ${taskList.size}")
             rebuildTasksList()
-        }
-    }
-
-    private fun observeSharedEvents() {
-        Log.d("FragmentHome", "Setting up shared event observers with viewLifecycleOwner")
-
-        // Наблюдаем за событиями выполнения задач
-        sharedEventViewModel.taskCompletedEvent.observe(viewLifecycleOwner) { task ->
-            task?.let {
-                Log.d("FragmentHome", "Shared event: Task completed - ${it.title}")
-                achievementsViewModel.onTaskCompleted()
-            }
-        }
-
-        // Наблюдаем за событиями обновления задач
-        sharedEventViewModel.taskUpdatedEvent.observe(viewLifecycleOwner) { task ->
-            task?.let {
-                Log.d("FragmentHome", "Shared event: Task updated - ${it.title}")
-            }
-        }
-
-        // Наблюдаем за событиями создания задач
-        sharedEventViewModel.taskCreatedEvent.observe(viewLifecycleOwner) { task ->
-            task?.let {
-                Log.d("FragmentHome", "Shared event: Task created - ${it.title}")
-            }
-        }
-
-        // Наблюдаем за событиями получения очков (если нужно)
-        sharedEventViewModel.taskPointsEvent.observe(viewLifecycleOwner) { points ->
-            points?.let {
-                Log.d("FragmentHome", "Points earned: $it")
-            }
         }
     }
 
@@ -458,31 +404,54 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
 
         if (currentTask != null) {
             val wasCompleted = currentTask.isCompleted
-            val isNowCompleted = !wasCompleted
 
+            // ПРОСТО ВЫЗЫВАЕМ МЕТОД VIEWMODEL - ВСЮ РАБОТУ ДЕЛАЕТ ОНА
             val updatedTask = tasksViewModel.toggleTaskCompletion(task.id)
 
             if (updatedTask != null) {
-                Log.d("FragmentHome", "Task completion toggled: ${task.title}, was: $wasCompleted, now: $isNowCompleted")
+                Log.d("FragmentHome", "Task completion toggled: ${task.title}, was: $wasCompleted, now: ${!wasCompleted}")
+                // НЕ вызываем sharedEventViewModel.onTaskCompleted() здесь!
+                // НЕ вызываем achievementsViewModel.onTaskCompleted() здесь!
+                // НЕ показываем тосты здесь!
+            }
+        }
+    }
 
-                if (isNowCompleted) {
-                    sharedEventViewModel.onTaskCompleted(updatedTask)
+    // Исправленный лаунчер для редактирования
+    private val taskResultLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getParcelableExtra<Task>(TaskActivity.EXTRA_TASK)?.let { updatedTask ->
+                val oldTask = tasksViewModel.getTaskById(updatedTask.id)
+                val wasCompleted = oldTask?.isCompleted ?: false
+                val isNowCompleted = updatedTask.isCompleted
 
-                    Toast.makeText(
-                        requireContext(),
-                        "Задача выполнена: ${task.title}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "Задача возвращена: ${task.title}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                tasksViewModel.updateTask(updatedTask)
+
+                // ТОЛЬКО UI через SharedEventViewModel
+                sharedEventViewModel.showTaskUpdated(updatedTask.title)
+
+                if (!wasCompleted && isNowCompleted) {
+                    // НЕ вызываем onTaskCompleted здесь!
+                    // TasksViewModel сам обработает это при toggle
                 }
             }
         }
     }
+
+    // Исправленный лаунчер для создания
+    private val taskCreateLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getParcelableExtra<Task>(TaskActivity.EXTRA_TASK)?.let { newTask ->
+                tasksViewModel.addTask(newTask)
+                // TasksViewModel сам покажет тост через SharedEventViewModel
+            }
+        }
+    }
+
 
     fun selectCategory(categoryId: String) {
         Log.d("FragmentHome", "selectCategory called with: $categoryId")

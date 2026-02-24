@@ -62,7 +62,13 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
     private var closedPosition: Float = 0f
     private var openPosition: Float = 0f
     private var shiftAmount: Float = 0f
-    private var defaultMarginStart: Int = 0
+
+
+
+    // Добавляем флаг для предотвращения дублирования
+    private var lastProcessedTaskId: String? = null
+    private var lastProcessedTime = 0L
+    private val DEBOUNCE_TIME_MS = 1000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,23 +80,13 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
         achievementsViewModel = ViewModelProvider(this)[AchievementsViewModel::class.java]
         sharedEventViewModel = ViewModelProvider(this)[SharedEventViewModel::class.java]
 
-        // Связываем TasksViewModel с SharedEventViewModel
+        // Связываем ViewModel друг с другом
+        tasksViewModel.setAchievementsViewModel(achievementsViewModel)
         tasksViewModel.setSharedEventViewModel(sharedEventViewModel)
+        achievementsViewModel.setSharedEventViewModel(sharedEventViewModel)
 
-        // Наблюдаем за событиями выполнения задач
-        sharedEventViewModel.taskCompletedEvent.observe(this) { task ->
-            task?.let {
-                achievementsViewModel.onTaskCompleted()
-                Log.d("MainActivity", "Task completed: ${it.title}")
-            }
-        }
-
-        // Наблюдаем за событиями разблокировки достижений
-        sharedEventViewModel.achievementUnlockedEvent.observe(this) { achievementName ->
-            achievementName?.let {
-                Toast.makeText(this, "🏆 Достижение получено: $achievementName", Toast.LENGTH_LONG).show()
-            }
-        }
+        // НАБЛЮДАЕМ ТОЛЬКО ЗА UI-СОБЫТИЯМИ
+        observeUiEvents()
 
         // Инициализация UI элементов
         initViews()
@@ -116,6 +112,30 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
 
         // Наблюдаем за изменениями в ViewModel
         observeViewModel()
+    }
+
+
+    private fun observeUiEvents() {
+        // Наблюдаем за тостами
+        sharedEventViewModel.toastMessage.observe(this) { message ->
+            message?.let {
+                Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Для логирования (опционально)
+        sharedEventViewModel.taskCompletedEvent.observe(this) { event ->
+            event?.let { (title, points) ->
+                Log.d("MainActivity", "Task completed UI event: $title +$points")
+            }
+        }
+
+        sharedEventViewModel.achievementUnlockedEvent.observe(this) { achievementName ->
+            achievementName?.let {
+                // Можно добавить анимацию или звук
+                Log.d("MainActivity", "Achievement unlocked UI event: $it")
+            }
+        }
     }
 
     private fun observeViewModel() {

@@ -3,66 +3,120 @@ package com.bountyapp.yourrtodo.viewmodel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.bountyapp.yourrtodo.model.Task
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class SharedEventViewModel : ViewModel() {
 
-    // Для передачи всей задачи
-    private val _taskCompletedEvent = MutableLiveData<Task?>()
-    val taskCompletedEvent: LiveData<Task?> = _taskCompletedEvent
+    // Только UI-события для отображения тостов и уведомлений
 
-    // ДОБАВЬТЕ ЭТО - для передачи только очков
-    private val _taskPointsEvent = MutableLiveData<Int?>()
-    val taskPointsEvent: LiveData<Int?> = _taskPointsEvent
+    // Тосты
+    private val _toastMessage = MutableLiveData<String?>()
+    val toastMessage: LiveData<String?> = _toastMessage
 
-    private val _achievementUnlockedEvent = MutableLiveData<String?>()
+    // События выполнения задач (только для логирования, не для бизнес-логики)
+    private val _taskCompletedEvent = MutableLiveData<Pair<String, Int>?>() // (title, points)
+    val taskCompletedEvent: LiveData<Pair<String, Int>?> = _taskCompletedEvent
+
+    private val _taskUncompletedEvent = MutableLiveData<String?>() // title
+    val taskUncompletedEvent: LiveData<String?> = _taskUncompletedEvent
+
+    private val _taskCreatedEvent = MutableLiveData<String?>() // title
+    val taskCreatedEvent: LiveData<String?> = _taskCreatedEvent
+
+    private val _taskDeletedEvent = MutableLiveData<String?>() // title
+    val taskDeletedEvent: LiveData<String?> = _taskDeletedEvent
+
+    private val _taskUpdatedEvent = MutableLiveData<String?>() // title
+    val taskUpdatedEvent: LiveData<String?> = _taskUpdatedEvent
+
+    // События достижений
+    private val _achievementUnlockedEvent = MutableLiveData<String?>() // achievement name
     val achievementUnlockedEvent: LiveData<String?> = _achievementUnlockedEvent
 
-    private val _taskUpdatedEvent = MutableLiveData<Task?>()
-    val taskUpdatedEvent: LiveData<Task?> = _taskUpdatedEvent
+    // Методы для отправки UI-событий с автоочисткой
 
-    private val _taskCreatedEvent = MutableLiveData<Task?>()
-    val taskCreatedEvent: LiveData<Task?> = _taskCreatedEvent
+    fun showTaskCompleted(taskTitle: String, points: Int) {
+        val message = "Задача выполнена: $taskTitle (+$points ★)"
+        _toastMessage.postValue(message)
+        _taskCompletedEvent.postValue(Pair(taskTitle, points))
 
-    // Существующий метод для задачи
-    fun onTaskCompleted(task: Task) {
-        _taskCompletedEvent.value = task
+        // Автоочистка через 1 секунду
+        viewModelScope.launch {
+            delay(1000)
+            _taskCompletedEvent.postValue(null)
+            _toastMessage.postValue(null)
+        }
     }
 
-    // НОВЫЙ метод для очков
-    fun onTaskPointsEarned(points: Int) {
-        _taskPointsEvent.value = points
+    fun showTaskUncompleted(taskTitle: String) {
+        val message = "Задача возвращена: $taskTitle"
+        _toastMessage.postValue(message)
+        _taskUncompletedEvent.postValue(taskTitle)
+
+        viewModelScope.launch {
+            delay(1000)
+            _taskUncompletedEvent.postValue(null)
+            _toastMessage.postValue(null)
+        }
     }
 
-    fun onAchievementUnlocked(achievementName: String) {
-        _achievementUnlockedEvent.value = achievementName
+    fun showTaskCreated(taskTitle: String) {
+        val message = "Задача создана: $taskTitle"
+        _toastMessage.postValue(message)
+        _taskCreatedEvent.postValue(taskTitle)
+
+        viewModelScope.launch {
+            delay(1000)
+            _taskCreatedEvent.postValue(null)
+            _toastMessage.postValue(null)
+        }
     }
 
-    fun onTaskUpdated(task: Task) {
-        _taskUpdatedEvent.value = task
+    fun showTaskDeleted(taskTitle: String) {
+        val message = "Задача удалена: $taskTitle"
+        _toastMessage.postValue(message)
+        _taskDeletedEvent.postValue(taskTitle)
+
+        viewModelScope.launch {
+            delay(1000)
+            _taskDeletedEvent.postValue(null)
+            _toastMessage.postValue(null)
+        }
     }
 
-    fun onTaskCreated(task: Task) {
-        _taskCreatedEvent.value = task
+    fun showTaskUpdated(taskTitle: String) {
+        val message = "Задача обновлена: $taskTitle"
+        _toastMessage.postValue(message)
+        _taskUpdatedEvent.postValue(taskTitle)
+
+        viewModelScope.launch {
+            delay(1000)
+            _taskUpdatedEvent.postValue(null)
+            _toastMessage.postValue(null)
+        }
     }
 
-    fun clearTaskCompletedEvent() {
-        _taskCompletedEvent.value = null
+    fun showAchievementUnlocked(achievementName: String, points: Int) {
+        val message = "🏆 Достижение получено: $achievementName (+$points ★)"
+        _toastMessage.postValue(message)
+        _achievementUnlockedEvent.postValue(achievementName)
+
+        viewModelScope.launch {
+            delay(2000)
+            _achievementUnlockedEvent.postValue(null)
+            _toastMessage.postValue(null)
+        }
     }
 
-    fun clearTaskPointsEvent() {
-        _taskPointsEvent.value = null
-    }
+    fun showPointsEarned(points: Int, reason: String) {
+        val message = "+$points ★ за $reason"
+        _toastMessage.postValue(message)
 
-    fun clearAchievementUnlockedEvent() {
-        _achievementUnlockedEvent.value = null
-    }
-
-    fun clearTaskUpdatedEvent() {
-        _taskUpdatedEvent.value = null
-    }
-
-    fun clearTaskCreatedEvent() {
-        _taskCreatedEvent.value = null
+        viewModelScope.launch {
+            delay(1000)
+            _toastMessage.postValue(null)
+        }
     }
 }
