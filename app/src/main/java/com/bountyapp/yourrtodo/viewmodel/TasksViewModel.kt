@@ -8,6 +8,9 @@ import androidx.lifecycle.viewModelScope
 import com.bountyapp.yourrtodo.data.repository.TaskRepository
 import com.bountyapp.yourrtodo.model.Task
 import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.Date
+import java.util.UUID
 
 class TasksViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -86,11 +89,22 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
                 if (!wasCompleted && updatedTask.isCompleted) {
                     val taskPoints = 5 // Базовые очки за задачу
 
-                    // 1. ПРЯМОЙ ВЫЗОВ AchievementsViewModel
                     achievementsViewModel?.addPoints(taskPoints, taskId)
-
-                    // 2. ТОЛЬКО UI-СОБЫТИЯ через SharedEventViewModel
                     sharedEventViewModel?.showTaskCompleted(task.title, taskPoints)
+
+                    // Если задача повторяющаяся и имеет правило повторения
+                    if (updatedTask.isRecurring && !updatedTask.recurrenceRule.isNullOrEmpty()) {
+                        // Проверяем, существует ли уже будущая задача в этой серии
+                        val existingFutureTask = _tasks.value?.find { otherTask ->
+                            otherTask.seriesId == updatedTask.seriesId
+                                    && otherTask.id != updatedTask.id
+                                    && !otherTask.isCompleted
+                        }
+                        if (existingFutureTask == null) {
+                            // Создаём новую задачу на будущее
+                            createRecurringTask(updatedTask)
+                        } // иначе – уже есть будущая задача, ничего не делаем
+                    }
                 }
 
                 // Если задача была возвращена (снято выполнение)
@@ -106,16 +120,55 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
         return updatedTask
     }
 
+    private fun calculateNextDueDate(currentDate: Date?, rule: String?): Date? {
+        if (currentDate == null) return null
+        val calendar = Calendar.getInstance()
+        calendar.time = currentDate
+        when (rule) {
+            "DAILY" -> calendar.add(Calendar.DAY_OF_MONTH, 1)
+            "WEEKLY" -> calendar.add(Calendar.WEEK_OF_YEAR, 1)
+            "MONTHLY" -> calendar.add(Calendar.MONTH, 1)
+            "YEARLY" -> calendar.add(Calendar.YEAR, 1)
+            else -> return null
+        }
+        return calendar.time
+    }
+
+    private fun createRecurringTask(originalTask: Task) {
+        val newDueDate = calculateNextDueDate(originalTask.dueDate, originalTask.recurrenceRule)
+
+        // Определяем seriesId: если у исходной задачи его нет, генерируем новый
+        val seriesId = originalTask.seriesId ?: UUID.randomUUID().toString()
+
+        // Создаём новую задачу на основе исходной
+        val newTask = originalTask.copy(
+            id = UUID.randomUUID().toString(),
+            dueDate = newDueDate,
+            isCompleted = false,
+            seriesId = seriesId
+        )
+
+        // Если у исходной задачи не было seriesId, обновляем её
+        if (originalTask.seriesId == null) {
+            originalTask.seriesId = seriesId
+            viewModelScope.launch {
+                repository.saveTask(originalTask)
+            }
+        }
+
+        viewModelScope.launch {
+            repository.saveTask(newTask)
+            sharedEventViewModel?.showTaskCreated(newTask.title)
+        }
+    }
+
     fun addTask(task: Task) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 repository.saveTask(task)
                 _isLoading.value = false
-
-                // UI-событие о создании задачи
                 sharedEventViewModel?.showTaskCreated(task.title)
-
             } catch (e: Exception) {
                 _error.value = "Ошибка добавления задачи: ${e.message}"
                 _isLoading.value = false
@@ -127,17 +180,12 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // Получаем задачу для отображения в тосте
                 val task = getTaskById(taskId)
-
                 repository.deleteTask(taskId)
                 _isLoading.value = false
-
-                // UI-событие об удалении
                 task?.let {
                     sharedEventViewModel?.showTaskDeleted(it.title)
                 }
-
             } catch (e: Exception) {
                 _error.value = "Ошибка удаления задачи: ${e.message}"
                 _isLoading.value = false

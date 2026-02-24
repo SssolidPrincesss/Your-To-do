@@ -10,6 +10,7 @@ data class Task(
     val id: String,
     var title: String,
     var dueDate: Date? = null,
+    var seriesId: String? = null,
     var isCompleted: Boolean = false,
     var hasReminder: Boolean = false,
     var isRecurring: Boolean = false,
