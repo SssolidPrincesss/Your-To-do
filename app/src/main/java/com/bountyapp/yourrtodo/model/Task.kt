@@ -11,7 +11,6 @@ data class Task(
     var title: String,
     var dueDate: Date? = null,
     var isCompleted: Boolean = false,
-    val isOverdue: Boolean = false,
     var hasReminder: Boolean = false,
     var isRecurring: Boolean = false,
     var hasSubtasks: Boolean = false,
@@ -37,9 +36,17 @@ data class Task(
         }
     }
 
+    // Вычисляемое свойство для просроченности
+    val isOverdue: Boolean
+        get() = dueDate?.let {
+            !isCompleted && it.before(
+                Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0) }.time
+            )
+        } ?: false
+
     fun getDisplayDate(): String {
         if (isSectionHeader) return ""
-        if (dueDate == null) return ""
+        if (dueDate == null) return "Сегодня"
 
         val today = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0) }
         val taskDate = Calendar.getInstance().apply {
@@ -79,15 +86,29 @@ data class Task(
         dueDate: Date? = this.dueDate,
         hasReminder: Boolean = this.hasReminder,
         isRecurring: Boolean = this.isRecurring,
+        hasSubtasks: Boolean = this.hasSubtasks,
         notes: String? = this.notes,
         reminderTime: Date? = this.reminderTime,
         recurrenceRule: String? = this.recurrenceRule,
         subtasks: MutableList<Subtask> = this.subtasks
     ): Task {
         return Task(
-            id, title, dueDate, isCompleted, isOverdue, hasReminder, isRecurring,
-            hasSubtasks, flagColor, categoryId, isSectionHeader, sectionTitle,
-            notes, reminderTime, recurrenceRule, attachments, subtasks
+            id = this.id,
+            title = this.title,
+            dueDate = dueDate,
+            isCompleted = isCompleted,
+            hasReminder = hasReminder,
+            isRecurring = isRecurring,
+            hasSubtasks = hasSubtasks,
+            flagColor = this.flagColor,
+            categoryId = this.categoryId,
+            isSectionHeader = this.isSectionHeader,
+            sectionTitle = this.sectionTitle,
+            notes = notes,
+            reminderTime = reminderTime,
+            recurrenceRule = recurrenceRule,
+            attachments = this.attachments,
+            subtasks = subtasks
         )
     }
 }

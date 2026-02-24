@@ -262,7 +262,6 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
             title = "",
             dueDate = null,
             isCompleted = false,
-            isOverdue = false,
             hasReminder = false,
             isRecurring = false,
             hasSubtasks = false,
@@ -301,15 +300,34 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
         Log.d("FragmentHome", "Found ${allTasks.size} tasks")
 
         val sectionedTasks = mutableListOf<Task>()
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val todayStart = calendar.time
+        val tomorrowStart = calendar.apply { add(Calendar.DAY_OF_MONTH, 1) }.time
 
-        // Сегодня (задачи без даты)
+        // Просроченные
+        sectionedTasks.add(Task.createSectionHeader("Просроченные"))
+        val overdueTasks = allTasks.filter { task ->
+            !task.isCompleted && task.dueDate != null && task.dueDate!!.before(todayStart)
+        }.sortedBy { it.dueDate }
+        sectionedTasks.addAll(overdueTasks)
+
+        // Сегодня (без даты или с датой сегодня)
         sectionedTasks.add(Task.createSectionHeader("Сегодня"))
-        val todayTasks = allTasks.filter { it.dueDate == null && !it.isCompleted }
+        val todayTasks = allTasks.filter { task ->
+            !task.isCompleted && (task.dueDate == null || task.dueDate!! in todayStart..<tomorrowStart)
+        }
         sectionedTasks.addAll(todayTasks)
 
-        // В планах (задачи с датой)
+        // В планах (задачи с датой от завтра)
         sectionedTasks.add(Task.createSectionHeader("В планах"))
-        val plannedTasks = allTasks.filter { it.dueDate != null && !it.isCompleted }
+        val plannedTasks = allTasks
+            .filter { !it.isCompleted && it.dueDate != null && it.dueDate!! >= tomorrowStart }
+            .sortedBy { it.dueDate }
         sectionedTasks.addAll(plannedTasks)
 
         // Выполнено
@@ -321,6 +339,7 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
             taskAdapter.updateOriginalTasks(sectionedTasks)
         }
     }
+
 
     private fun setupSearch() {
         searchButton.setOnClickListener {

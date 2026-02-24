@@ -34,7 +34,6 @@ class TaskRepository(context: Context) {
                     title = taskEntity.title,
                     dueDate = taskEntity.dueDate,
                     isCompleted = taskEntity.isCompleted,
-                    isOverdue = taskEntity.isOverdue,
                     hasReminder = taskEntity.hasReminder,
                     isRecurring = taskEntity.isRecurring,
                     hasSubtasks = taskEntity.hasSubtasks,
@@ -107,7 +106,6 @@ class TaskRepository(context: Context) {
                 title = "Создать годовой отчет",
                 dueDate = null,  // сегодня
                 isCompleted = false,
-                isOverdue = false,
                 hasReminder = true,
                 isRecurring = false,
                 hasSubtasks = true,
@@ -128,7 +126,6 @@ class TaskRepository(context: Context) {
                 title = "Проверить почту",
                 dueDate = null,  // сегодня
                 isCompleted = false,
-                isOverdue = false,
                 hasReminder = false,
                 isRecurring = true,
                 hasSubtasks = false,
@@ -148,7 +145,6 @@ class TaskRepository(context: Context) {
                     add(Calendar.DAY_OF_MONTH, 1)  // завтра
                 }.time,
                 isCompleted = false,
-                isOverdue = false,
                 hasReminder = true,
                 isRecurring = false,
                 hasSubtasks = true,
@@ -172,7 +168,6 @@ class TaskRepository(context: Context) {
                     add(Calendar.DAY_OF_MONTH, 2)  // через 2 дня
                 }.time,
                 isCompleted = false,
-                isOverdue = false,
                 hasReminder = false,
                 isRecurring = false,
                 hasSubtasks = true,
@@ -195,7 +190,6 @@ class TaskRepository(context: Context) {
                     add(Calendar.DAY_OF_MONTH, -1)  // вчера (просрочено)
                 }.time,
                 isCompleted = true,  // выполнена
-                isOverdue = false,
                 hasReminder = false,
                 isRecurring = false,
                 hasSubtasks = false,

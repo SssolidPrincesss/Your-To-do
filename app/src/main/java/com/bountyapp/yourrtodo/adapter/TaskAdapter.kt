@@ -1,6 +1,7 @@
 package com.bountyapp.yourrtodo.adapter
 
 import android.content.Context
+import android.graphics.Color
 import android.graphics.Paint
 import android.view.LayoutInflater
 import android.view.View
@@ -265,6 +266,12 @@ class TaskAdapter(
                 taskDate.setTextColor(ContextCompat.getColor(context, android.R.color.darker_gray))
                 completedOverlay.visibility = View.GONE
                 taskCard.alpha = 1.0f
+            }
+
+            if (task.isOverdue) {
+                taskDate.setTextColor(Color.RED)
+            } else {
+                taskDate.setTextColor(ContextCompat.getColor(context, android.R.color.darker_gray))
             }
 
             // Показываем/скрываем иконки
