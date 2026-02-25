@@ -9,7 +9,7 @@ import java.util.*
 data class Task(
     val id: String,
     var title: String,
-    var dueDate: Date? = null,
+    var dueDate: Date? = Date(),
     var seriesId: String? = null,
     var isCompleted: Boolean = false,
     var hasReminder: Boolean = false,
@@ -40,9 +40,7 @@ data class Task(
     // Вычисляемое свойство для просроченности
     val isOverdue: Boolean
         get() = dueDate?.let {
-            !isCompleted && it.before(
-                Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0) }.time
-            )
+            !isCompleted && it.before(Date())   // сравниваем с текущим моментом
         } ?: false
 
     fun getDisplayDate(): String {

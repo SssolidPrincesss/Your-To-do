@@ -57,6 +57,7 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
     private lateinit var achievementsViewModel: AchievementsViewModel
     private lateinit var sharedEventViewModel: SharedEventViewModel
 
+
     // Константы для размеров
     private companion object {
         const val DRAWER_WIDTH_DP = 320f

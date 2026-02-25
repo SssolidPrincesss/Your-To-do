@@ -104,7 +104,6 @@ class TaskRepository(context: Context) {
             val task1 = Task(
                 id = "1",
                 title = "Создать годовой отчет",
-                dueDate = null,  // сегодня
                 isCompleted = false,
                 hasReminder = true,
                 isRecurring = false,
@@ -124,7 +123,6 @@ class TaskRepository(context: Context) {
             val task2 = Task(
                 id = "2",
                 title = "Проверить почту",
-                dueDate = null,  // сегодня
                 isCompleted = false,
                 hasReminder = false,
                 isRecurring = true,

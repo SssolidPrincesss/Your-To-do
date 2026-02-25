@@ -14,7 +14,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class CalendarAdapter(
-    private val days: List<CalendarDay>,
+    private var days: List<CalendarDay>,
     private val onDayClick: (CalendarDay) -> Unit
 ) : RecyclerView.Adapter<CalendarAdapter.CalendarDayViewHolder>() {
 
@@ -26,6 +26,11 @@ class CalendarAdapter(
         return CalendarDayViewHolder(view) { position ->
             handleDayClick(position)
         }
+    }
+    fun updateDays(newDays: List<CalendarDay>) {
+        days = newDays
+        selectedPosition = -1
+        notifyDataSetChanged()
     }
 
     override fun onBindViewHolder(holder: CalendarDayViewHolder, position: Int) {

@@ -75,6 +75,10 @@ class TaskActivity : AppCompatActivity() {
             intent.getParcelableExtra(EXTRA_TASK)
         }
 
+        if (isNewTask && currentTask?.dueDate == null) {
+            currentTask?.dueDate = Calendar.getInstance().time
+        }
+
         initViews()
         setupSpinner()
         setupSubtasksRecyclerView()
@@ -202,7 +206,7 @@ class TaskActivity : AppCompatActivity() {
         }
 
         binding.layoutDates.setOnClickListener {
-            showDatePicker()
+            showDateTimePicker()
         }
 
         binding.layoutReminder.setOnClickListener {
@@ -252,6 +256,7 @@ class TaskActivity : AppCompatActivity() {
 
                 updateCompleteButtonState(task.isCompleted)
             } else {
+                dueDate = task.dueDate
                 // Для новой задачи оставляем поля пустыми
                 updateDueDateDisplay()
                 updateReminderDisplay()
@@ -368,7 +373,7 @@ class TaskActivity : AppCompatActivity() {
         }
     }
 
-    private fun showDatePicker() {
+    private fun showDateTimePicker() {
         val calendar = Calendar.getInstance()
         dueDate?.let {
             calendar.time = it
@@ -378,10 +383,21 @@ class TaskActivity : AppCompatActivity() {
             this,
             { _, year, month, dayOfMonth ->
                 calendar.set(year, month, dayOfMonth)
-                dueDate = calendar.time
-                updateDueDateDisplay()
-                hasChanges = true
-                scheduleAutoSave()
+                // После выбора даты открываем TimePicker
+                TimePickerDialog(
+                    this,
+                    { _, hourOfDay, minute ->
+                        calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                        calendar.set(Calendar.MINUTE, minute)
+                        dueDate = calendar.time
+                        updateDueDateDisplay()
+                        hasChanges = true
+                        scheduleAutoSave()
+                    },
+                    calendar.get(Calendar.HOUR_OF_DAY),
+                    calendar.get(Calendar.MINUTE),
+                    true
+                ).show()
             },
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH),
@@ -389,9 +405,10 @@ class TaskActivity : AppCompatActivity() {
         ).show()
     }
 
+
     private fun updateDueDateDisplay() {
         binding.tvDueDate.text = dueDate?.let {
-            val format = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+            val format = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
             format.format(it)
         } ?: "Нет срока"
     }
@@ -571,9 +588,8 @@ class TaskActivity : AppCompatActivity() {
     }
 
     private fun saveAndExit() {
-        if (saveTask()) {
-            finish()
-        }
+        saveTask()
+        finish()
     }
 
     override fun onPause() {

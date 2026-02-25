@@ -263,7 +263,6 @@ class FragmentHome : Fragment(), TaskSwipeCallback {
         val newTask = Task(
             id = UUID.randomUUID().toString(),
             title = "",
-            dueDate = null,
             isCompleted = false,
             hasReminder = false,
             isRecurring = false,
