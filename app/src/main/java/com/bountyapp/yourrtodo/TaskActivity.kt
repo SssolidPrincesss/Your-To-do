@@ -3,6 +3,7 @@ package com.bountyapp.yourrtodo
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -25,6 +26,12 @@ import com.bountyapp.yourrtodo.model.Task
 import com.bountyapp.yourrtodo.viewmodel.CategoriesViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import android.webkit.MimeTypeMap
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
+import com.bountyapp.yourrtodo.adapter.AttachmentsAdapter
+import java.io.File
+import androidx.recyclerview.widget.RecyclerView
 
 class TaskActivity : AppCompatActivity() {
 
@@ -49,6 +56,24 @@ class TaskActivity : AppCompatActivity() {
     // Таймер для автосохранения
     private var autoSaveHandler = Handler(Looper.getMainLooper())
     private var autoSaveRunnable: Runnable? = null
+
+    // Вложения
+    private val attachments = mutableListOf<String>()
+    private var currentAttachmentsAdapter: AttachmentsAdapter? = null
+
+    // Контракт для выбора файла (объявлен как поле класса)
+    private val getFileLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let {
+            val filePath = copyFileToInternalStorage(it)
+            filePath?.let { path ->
+                attachments.add(path)
+                currentAttachmentsAdapter?.notifyDataSetChanged()   // ← обновляем список
+                updateAttachmentsDisplay()
+                hasChanges = true
+                scheduleAutoSave()
+            } ?: Toast.makeText(this, "Не удалось сохранить файл", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     companion object {
         const val EXTRA_TASK = "extra_task"
@@ -254,9 +279,15 @@ class TaskActivity : AppCompatActivity() {
                 notes = task.notes
                 updateNotesDisplay()
 
+                attachments.clear()
+                attachments.addAll(task.attachments)   // загружаем вложения
+                updateAttachmentsDisplay()
+
                 updateCompleteButtonState(task.isCompleted)
             } else {
                 dueDate = task.dueDate
+                attachments.clear()                    // для новой задачи вложений нет
+                updateAttachmentsDisplay()
                 // Для новой задачи оставляем поля пустыми
                 updateDueDateDisplay()
                 updateReminderDisplay()
@@ -405,7 +436,6 @@ class TaskActivity : AppCompatActivity() {
         ).show()
     }
 
-
     private fun updateDueDateDisplay() {
         binding.tvDueDate.text = dueDate?.let {
             val format = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
@@ -527,9 +557,48 @@ class TaskActivity : AppCompatActivity() {
     }
 
     private fun showAttachmentsDialog() {
-        Toast.makeText(this, "Функция вложений будет доступна в следующем обновлении", Toast.LENGTH_SHORT).show()
-    }
+        val dialogView = layoutInflater.inflate(R.layout.dialog_attachments, null)
+        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.rv_attachments)
+        val btnAdd = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_add_attachment)
 
+        recyclerView.layoutManager = LinearLayoutManager(this)
+
+        val adapter = AttachmentsAdapter(attachments).apply {
+            onDelete = { path ->
+                deleteAttachmentFile(path)
+                attachments.remove(path)
+                this.notifyDataSetChanged()
+                updateAttachmentsDisplay()
+                hasChanges = true
+                scheduleAutoSave()
+            }
+            onItemClick = { path ->
+                val file = File(path)
+                if (file.exists()) {
+                    val uri = FileProvider.getUriForFile(this@TaskActivity, "${packageName}.fileprovider", file)
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, contentResolver.getType(uri) ?: "*/*")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    startActivity(Intent.createChooser(intent, "Открыть с помощью"))
+                } else {
+                    Toast.makeText(this@TaskActivity, "Файл не найден", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        recyclerView.adapter = adapter
+        currentAttachmentsAdapter = adapter   // ← сохраняем ссылку
+
+        btnAdd.setOnClickListener {
+            getFileLauncher.launch("*/*")
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Вложения")
+            .setView(dialogView)
+            .setPositiveButton("Готово", null)
+            .show()
+    }
     private fun completeTask() {
         currentTask?.let { task ->
             task.isCompleted = !task.isCompleted
@@ -572,8 +641,10 @@ class TaskActivity : AppCompatActivity() {
             task.hasReminder = reminderTime != null
             task.isRecurring = recurrenceRule != null
             task.hasSubtasks = subtasks.isNotEmpty()
-
             task.subtasks = subtasks.toMutableList()
+
+            // Сохраняем вложения
+            task.attachments = attachments.toList()
 
             hasChanges = false
 
@@ -612,6 +683,41 @@ class TaskActivity : AppCompatActivity() {
                 .show()
         } else {
             super.onBackPressed()
+        }
+    }
+
+    // ВЛОЖЕНИЯ
+    private fun copyFileToInternalStorage(uri: Uri): String? {
+        val inputStream = contentResolver.openInputStream(uri) ?: return null
+        val extension = getFileExtension(uri)
+        val fileName = "att_${UUID.randomUUID()}.$extension"
+        val dir = File(filesDir, "attachments")
+        dir.mkdirs()
+        val outputFile = File(dir, fileName)
+        outputFile.outputStream().use { output ->
+            inputStream.copyTo(output)
+        }
+        return outputFile.absolutePath
+    }
+
+    private fun getFileExtension(uri: Uri): String {
+        val mimeType = contentResolver.getType(uri)
+        return MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "bin"
+    }
+
+    private fun deleteAttachmentFile(path: String) {
+        File(path).delete()
+    }
+
+    private fun getFileNameFromPath(path: String): String {
+        return File(path).name
+    }
+
+    private fun updateAttachmentsDisplay() {
+        binding.tvAttachments.text = when (attachments.size) {
+            0 -> "Нет вложений"
+            1 -> "1 файл"
+            else -> "${attachments.size} файла"
         }
     }
 }

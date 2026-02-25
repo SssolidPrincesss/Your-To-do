@@ -22,7 +22,7 @@ data class Task(
     var notes: String? = null,
     var reminderDateTime: Date? = null,
     var recurrenceRule: String? = null,
-    val attachments: List<String> = emptyList(),
+    var attachments: List<String> = emptyList(),
     var subtasks: MutableList<Subtask> = mutableListOf()
 ) : Parcelable {
 
