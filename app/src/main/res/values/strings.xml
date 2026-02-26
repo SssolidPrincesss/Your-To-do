@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <string name="personal_rating">Личный рейтинг:</string>
+    <string name="star">Звезда</string>
+    <string name="themes">Темы</string>
+    <string name="profile">Профиль</string>
+    <string name="user_tops">Топы пользователей</string>
+    <string name="support_us">Поддержать нас</string>
+    <string name="statuses">Статусы</string>
+    <string name="contact_us">Связаться с нами</string>
+    <string name="tasks">Задачи</string>
+    <string name="calendar">Календарь</string>
+    <string name="menu">Меню</string>
+
     <!-- Название приложения -->
     <string name="app_name">BountyApp</string>
     <string name="clear_search">Очистить поиск</string>
