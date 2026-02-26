@@ -26,4 +26,11 @@ class Converters {
     fun toAchievementType(name: String): AchievementType {
         return AchievementType.valueOf(name)
     }
+
+    @TypeConverter
+    fun fromStringList(value: List<String>): String = value.joinToString("|")
+
+    @TypeConverter
+    fun toStringList(value: String): List<String> =
+        if (value.isBlank()) emptyList() else value.split("|")
 }

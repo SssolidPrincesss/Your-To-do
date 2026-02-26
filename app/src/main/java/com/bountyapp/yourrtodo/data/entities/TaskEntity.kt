@@ -19,5 +19,6 @@ data class TaskEntity(
     val categoryId: String,
     val notes: String?,
     val reminderTime: Date?,
-    val recurrenceRule: String?
+    val recurrenceRule: String?,
+    val attachments: List<String> = emptyList()
 )

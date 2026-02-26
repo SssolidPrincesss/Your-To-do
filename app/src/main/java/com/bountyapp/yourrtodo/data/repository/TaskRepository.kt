@@ -8,6 +8,7 @@ import com.bountyapp.yourrtodo.model.Subtask
 import com.bountyapp.yourrtodo.model.Task
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.io.File
 import java.util.*
 
 class TaskRepository(context: Context) {
@@ -42,7 +43,8 @@ class TaskRepository(context: Context) {
                     notes = taskEntity.notes,
                     reminderDateTime  = taskEntity.reminderTime,
                     recurrenceRule = taskEntity.recurrenceRule,
-                    subtasks = subtasks.toMutableList()
+                    subtasks = subtasks.toMutableList(),
+                    attachments = taskEntity.attachments
                 )
             }
         }
@@ -64,7 +66,8 @@ class TaskRepository(context: Context) {
                 categoryId = task.categoryId,
                 notes = task.notes,
                 reminderTime = task.reminderDateTime,
-                recurrenceRule = task.recurrenceRule
+                recurrenceRule = task.recurrenceRule,
+                attachments = task.attachments
             )
         )
 
@@ -84,6 +87,14 @@ class TaskRepository(context: Context) {
 
     suspend fun deleteTask(taskId: String) {
         taskDao.getTaskById(taskId)?.let { taskEntity ->
+            // Удаляем файлы вложений
+            taskEntity.attachments.forEach { path ->
+                try {
+                    File(path).delete()
+                } catch (e: Exception) {
+                    // логируем ошибку
+                }
+            }
             subtaskDao.deleteSubtasksForTask(taskId)
             taskDao.deleteTask(taskEntity)
         }

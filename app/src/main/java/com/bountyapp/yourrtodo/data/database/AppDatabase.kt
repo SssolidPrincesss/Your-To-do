@@ -19,7 +19,7 @@ import com.bountyapp.yourrtodo.data.entities.*
         AchievementEntity::class,      // Добавлено
         UserStatsEntity::class          // Добавлено
     ],
-    version = 3, // Увеличена версия с 2 до 3
+    version = 4, // Увеличена версия с 2 до 3
     exportSchema = false
 )
 @TypeConverters(Converters::class)
