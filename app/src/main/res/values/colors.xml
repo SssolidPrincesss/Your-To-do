@@ -30,6 +30,14 @@
     <color name="warning">#FFC107</color>
     <color name="info">#2196F3</color>
 
+    <!-- Основной желтый фон меню -->
+    <color name="menu_background">#F4F275</color>
+
+    <!-- Эффект нажатия (полупрозрачный желтый) -->
+    <color name="ripple_yellow">#40F4F275</color>
+
+    <!-- Желтый фон профиля -->
+    <color name="profile_background">#FDF391</color>
 
     <!-- Цвета для фона -->
     <color name="bg_light_blue">#E8F4F8</color>

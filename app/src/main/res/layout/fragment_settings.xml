@@ -5,11 +5,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/todobackground"
     tools:context=".fragments.FragmentSettings">
 
     <!-- Карточка профиля пользователя -->
-    <androidx.cardview.widget.CardView
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardUserProfile"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -17,8 +16,7 @@
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
         app:cardCornerRadius="48dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="#8FFDF391"
+        app:cardBackgroundColor="@android:color/transparent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -28,8 +26,9 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:padding="10dp"
-
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:background="@drawable/menu_card_background"
+            >
 
             <!-- Аватар пользователя -->
             <de.hdodenhof.circleimageview.CircleImageView
@@ -48,7 +47,8 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="16dp"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:background="@android:color/transparent">
 
                 <TextView
                     android:id="@+id/tvUserName"
@@ -74,11 +74,10 @@
 
         </LinearLayout>
 
-    </androidx.cardview.widget.CardView>
+    </com.google.android.material.card.MaterialCardView>
 
     <!-- Основная карточка меню -->
-    <androidx.cardview.widget.CardView
-
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardMenu"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -87,11 +86,10 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
         app:cardCornerRadius="24dp"
-        app:cardElevation="6dp"
+        app:cardBackgroundColor="@android:color/transparent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:cardBackgroundColor="#9AF4F275"
         app:layout_constraintTop_toBottomOf="@id/cardUserProfile">
 
         <LinearLayout
@@ -99,7 +97,7 @@
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:padding="16dp"
-            android:background="@android:color/transparent">
+            android:background="@drawable/menu_card_background">
 
             <!-- Блок с личным рейтингом -->
             <androidx.cardview.widget.CardView
@@ -152,7 +150,6 @@
             <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_marginTop="12dp"
                 android:fillViewport="true"
                 android:scrollbars="none"
                 android:background="@android:color/transparent">
@@ -160,8 +157,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@android:color/transparent">
+                    android:orientation="vertical">
 
                     <!-- Кнопка: Темы -->
                     <com.google.android.material.button.MaterialButton
@@ -185,7 +181,8 @@
                         app:iconSize="48dp"
                         app:iconTint="@color/dark_gray"
                         app:backgroundTint="@android:color/transparent"
-                        app:cornerRadius="12dp" />
+                        app:cornerRadius="12dp"
+                        app:rippleColor="@color/ripple_yellow" />
 
                     <!-- Кнопка: Профиль -->
                     <com.google.android.material.button.MaterialButton
@@ -209,7 +206,8 @@
                         app:iconSize="48dp"
                         app:iconTint="@color/dark_gray"
                         app:backgroundTint="@android:color/transparent"
-                        app:cornerRadius="12dp" />
+                        app:cornerRadius="12dp"
+                        app:rippleColor="@color/ripple_yellow" />
 
                     <!-- Кнопка: Топы пользователей -->
                     <com.google.android.material.button.MaterialButton
@@ -233,7 +231,8 @@
                         app:iconSize="48dp"
                         app:iconTint="@color/dark_gray"
                         app:backgroundTint="@android:color/transparent"
-                        app:cornerRadius="12dp" />
+                        app:cornerRadius="12dp"
+                        app:rippleColor="@color/ripple_yellow" />
 
                     <!-- Кнопка: Поддержать нас -->
                     <com.google.android.material.button.MaterialButton
@@ -257,7 +256,8 @@
                         app:iconSize="48dp"
                         app:iconTint="@color/dark_gray"
                         app:backgroundTint="@android:color/transparent"
-                        app:cornerRadius="12dp" />
+                        app:cornerRadius="12dp"
+                        app:rippleColor="@color/ripple_yellow" />
 
                     <!-- Кнопка: Статусы -->
                     <com.google.android.material.button.MaterialButton
@@ -281,7 +281,8 @@
                         app:iconSize="48dp"
                         app:iconTint="@color/dark_gray"
                         app:backgroundTint="@android:color/transparent"
-                        app:cornerRadius="12dp" />
+                        app:cornerRadius="12dp"
+                        app:rippleColor="@color/ripple_yellow" />
 
                     <!-- Кнопка: Связаться с нами -->
                     <com.google.android.material.button.MaterialButton
@@ -305,7 +306,8 @@
                         app:iconSize="48dp"
                         app:iconTint="@color/dark_gray"
                         app:backgroundTint="@android:color/transparent"
-                        app:cornerRadius="12dp" />
+                        app:cornerRadius="12dp"
+                        app:rippleColor="@color/ripple_yellow" />
 
                 </LinearLayout>
 
@@ -313,6 +315,6 @@
 
         </LinearLayout>
 
-    </androidx.cardview.widget.CardView>
+    </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
