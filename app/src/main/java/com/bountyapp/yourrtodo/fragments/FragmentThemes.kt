@@ -6,17 +6,20 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.bountyapp.yourrtodo.R
-import com.bountyapp.yourrtodo.adapter.ThemeAdapter
+import com.bountyapp.yourrtodo.adapter.ExclusiveThemeAdapter
 import com.bountyapp.yourrtodo.databinding.FragmentThemesBinding
 import com.bountyapp.yourrtodo.viewmodel.ThemesViewModel
 
 /**
  * Фрагмент отображения и выбора тем оформления
- * Следует принципам MVVM: только UI-логика, бизнес-логика в ViewModel
+ * Соответствует макету: два блока (стандартные + эксклюзивные)
+ * Стандартные темы имеют превью с изображениями
  */
 class FragmentThemes : Fragment() {
 
@@ -24,14 +27,13 @@ class FragmentThemes : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var viewModel: ThemesViewModel
-    private lateinit var themeAdapter: ThemeAdapter
+    private lateinit var exclusiveAdapter: ExclusiveThemeAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // Используем ViewBinding для безопасной работы с views
         _binding = FragmentThemesBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -39,79 +41,146 @@ class FragmentThemes : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Инициализация ViewModel
-        viewModel = ViewModelProvider(this)[ThemesViewModel::class.java]
+        viewModel = ViewModelProvider(requireActivity())[ThemesViewModel::class.java]
 
-        // Настройка UI
         setupToolbar()
-        setupRecyclerView()
+        setupStandardThemes()
+        setupExclusiveRecyclerView()
         observeViewModel()
     }
 
     /**
-     * Настраивает верхнюю панель с кнопкой "Назад"
+     * Настраивает верхнюю панель только с кнопкой "Назад"
      */
     private fun setupToolbar() {
         binding.toolbar.setNavigationOnClickListener {
-            // Возврат к экрану настроек через Back Stack
             parentFragmentManager.popBackStack()
         }
-        binding.toolbar.title = "Темы"
+        // Заголовок не устанавливаем - только стрелка
     }
 
     /**
-     * Настраивает RecyclerView для отображения списка тем
+     * Настраивает обработчики для стандартных тем с превью
      */
-    private fun setupRecyclerView() {
-        themeAdapter = ThemeAdapter(
-            onThemeClick = { theme ->
-                // Передаём выбор в ViewModel
-                viewModel.onThemeSelected(theme)
+    private fun setupStandardThemes() {
+        // Тёмная тема
+        binding.cardDarkTheme.apply {
+            setOnClickListener {
+                viewModel.onStandardThemeSelected(isDark = true)
             }
-        )
+            // Анимация нажатия
+            isClickable = true
+            isFocusable = true
+        }
 
-        binding.recyclerViewThemes.apply {
+        // Светлая тема
+        binding.cardLightTheme.apply {
+            setOnClickListener {
+                viewModel.onStandardThemeSelected(isDark = false)
+            }
+            // Анимация нажатия
+            isClickable = true
+            isFocusable = true
+        }
+    }
+
+    /**
+     * Настраивает RecyclerView для эксклюзивных тем
+     */
+    private fun setupExclusiveRecyclerView() {
+        exclusiveAdapter = ExclusiveThemeAdapter { theme ->
+            viewModel.onExclusiveThemeSelected(theme)
+        }
+
+        binding.recyclerViewExclusive.apply {
             layoutManager = LinearLayoutManager(requireContext())
-            adapter = themeAdapter
+            adapter = exclusiveAdapter
             // Отключаем анимацию для стабильности
             itemAnimator = null
+            // Отключаем оверсколл для красоты
+            overScrollMode = View.OVER_SCROLL_NEVER
         }
     }
 
     /**
-     * Наблюдает за изменениями в ViewModel и обновляет UI
-     * Разделяет ответственность: ViewModel хранит данные, Fragment отображает
+     * Наблюдает за изменениями в ViewModel
      */
     private fun observeViewModel() {
-        // Список тем
-        viewModel.themes.observe(viewLifecycleOwner) { themes ->
-            themeAdapter.submitList(themes)
-        }
-
-        // ID выбранной темы (для подсветки текущего выбора)
+        // Выбранная тема - обновляем маркеры
         viewModel.selectedThemeId.observe(viewLifecycleOwner) { selectedId ->
-            themeAdapter.setSelectedThemeId(selectedId)
+            updateStandardThemeMarkers(selectedId)
+            exclusiveAdapter.setSelectedThemeId(selectedId)
         }
 
-        // Сообщения для пользователя
+        // Список эксклюзивных тем
+        viewModel.exclusiveThemes.observe(viewLifecycleOwner) { themes ->
+            exclusiveAdapter.submitList(themes)
+            fixRecyclerViewHeight(binding.recyclerViewExclusive)
+        }
+
+        // Сообщения
         viewModel.uiMessage.observe(viewLifecycleOwner) { message ->
             message?.let {
                 Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show()
-                // Очищаем сообщение после показа
                 viewModel.clearMessage()
             }
-        }
-
-        // Событие успешного применения темы
-        viewModel.themeApplied.observe(viewLifecycleOwner) { themeId ->
-            // Можно добавить анимацию или обновить UI
-            themeAdapter.notifyDataSetChanged()
         }
     }
 
     /**
-     * Обновляет список тем при возврате на экран
-     * Например, если статус пользователя изменился в другом месте
+     * Обновляет маркеры на стандартных темах
+     */
+    private fun updateStandardThemeMarkers(selectedId: String?) {
+        binding.checkmarkDark.visibility =
+            if (selectedId == "theme_dark") View.VISIBLE else View.GONE
+        binding.checkmarkLight.visibility =
+            if (selectedId == "theme_light") View.VISIBLE else View.GONE
+
+        // Добавляем визуальную подсветку выбранной карточки
+        binding.cardDarkTheme.strokeWidth =
+            if (selectedId == "theme_dark") 4 else 0
+        binding.cardLightTheme.strokeWidth =
+            if (selectedId == "theme_light") 4 else 0
+
+        binding.cardDarkTheme.strokeColor =
+            ContextCompat.getColor(requireContext(), R.color.yellow_star)
+        binding.cardLightTheme.strokeColor =
+            ContextCompat.getColor(requireContext(), R.color.yellow_star)
+    }
+
+    private fun fixRecyclerViewHeight(recyclerView: RecyclerView) {
+        val adapter = recyclerView.adapter ?: return
+
+        recyclerView.post {
+            var totalHeight = 0
+            for (i in 0 until adapter.itemCount) {
+                val viewType = adapter.getItemViewType(i)
+                val holder = adapter.onCreateViewHolder(recyclerView, viewType)
+                @Suppress("UNCHECKED_CAST")
+                adapter.onBindViewHolder(holder as RecyclerView.ViewHolder, i)
+
+                holder.itemView.measure(
+                    View.MeasureSpec.makeMeasureSpec(recyclerView.width, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.UNSPECIFIED
+                )
+                totalHeight += holder.itemView.measuredHeight
+
+                val params = holder.itemView.layoutParams as? ViewGroup.MarginLayoutParams
+                if (params != null) {
+                    totalHeight += params.topMargin + params.bottomMargin
+                }
+            }
+
+            totalHeight += recyclerView.paddingTop + recyclerView.paddingBottom
+            recyclerView.layoutParams.height = totalHeight
+            recyclerView.requestLayout()
+        }
+    }
+
+
+
+    /**
+     * Обновляет темы при возврате на экран
      */
     override fun onResume() {
         super.onResume()
@@ -120,6 +189,6 @@ class FragmentThemes : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null // Освобождаем память
+        _binding = null
     }
 }

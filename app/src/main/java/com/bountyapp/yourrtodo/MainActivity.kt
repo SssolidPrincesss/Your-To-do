@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -27,10 +28,12 @@ import com.bountyapp.yourrtodo.fragments.FragmentCalendar
 import com.bountyapp.yourrtodo.fragments.FragmentHome
 import com.bountyapp.yourrtodo.fragments.FragmentSettings
 import com.bountyapp.yourrtodo.model.Category
+import com.bountyapp.yourrtodo.utils.ThemeManager
 import com.bountyapp.yourrtodo.viewmodel.AchievementsViewModel
 import com.bountyapp.yourrtodo.viewmodel.CategoriesViewModel
 import com.bountyapp.yourrtodo.viewmodel.SharedEventViewModel
 import com.bountyapp.yourrtodo.viewmodel.TasksViewModel
+import com.bountyapp.yourrtodo.viewmodel.ThemesViewModel
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -69,6 +72,9 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
     private var shiftAmount: Float = 0f
 
 
+    private lateinit var viewModel: ThemesViewModel
+    private var rootContainer: View? = null
+
 
     // Добавляем флаг для предотвращения дублирования
     private var lastProcessedTaskId: String? = null
@@ -104,6 +110,27 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
         tasksViewModel.setAchievementsViewModel(achievementsViewModel)
         tasksViewModel.setSharedEventViewModel(sharedEventViewModel)
         achievementsViewModel.setSharedEventViewModel(sharedEventViewModel)
+
+
+        // 👇 Сначала инициализируем rootContainer
+        rootContainer = findViewById(R.id.root_container)
+
+        // Получаем ViewModel (тот же экземпляр, что и во фрагменте)
+        viewModel = ViewModelProvider(this)[ThemesViewModel::class.java]
+
+        // Применяем сохранённую тему при старте (с проверкой)
+        rootContainer?.let {
+            ThemeManager.applySavedTheme(this, it)
+        }
+
+        // 👇 Наблюдаем за изменениями темы
+        viewModel.selectedThemeId.observe(this) { themeId ->
+            // 👇 Безопасный доступ с проверкой на null
+            rootContainer?.let { container ->
+                ThemeManager.applyThemeToView(this, container, themeId)
+            }
+        }
+
 
         askNotificationPermission()
 
@@ -476,6 +503,12 @@ class MainActivity : AppCompatActivity(), CategorySwipeCallback {
         super.onResume()
         if (::fragmentHome.isInitialized) {
             fragmentHome.refreshCategories()
+        }
+    }
+    override fun onPostResume() {
+        super.onPostResume()
+        rootContainer?.let {
+            ThemeManager.applySavedTheme(this, it)
         }
     }
 }

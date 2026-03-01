@@ -1,54 +1,59 @@
 // com/bountyapp/yourrtodo/model/ThemeItem.kt
 package com.bountyapp.yourrtodo.model
 
-import com.bountyapp.yourrtodo.model.UserStatus
+import com.bountyapp.yourrtodo.R
 
 /**
  * Модель элемента темы для отображения в списке
- * @param id Уникальный идентификатор темы
- * @param name Название темы
- * @param previewColor Цвет превью (для заглушки или градиента)
- * @param requiredStatus Минимальный статус пользователя для разблокировки
- * @param isExclusive Является ли тема эксклюзивной
- * @param isUnlocked Разблокирована ли тема для текущего пользователя
  */
 data class ThemeItem(
     val id: String,
     val name: String,
-    val previewColor: String, // HEX цвет или URL изображения
+    val previewDrawable: Int,      // Ресурс превью (drawable)
+    val overlayDrawable: Int = 0,  // Ресурс затемнения (опционально)
     val requiredStatus: UserStatus,
     val isExclusive: Boolean = false,
-    val isUnlocked: Boolean = false
+    val isUnlocked: Boolean = false,
+    val isDark: Boolean = false    // Для стандартных тем
 ) {
     companion object {
         /**
-         * Создаёт список тем по умолчанию
-         * В будущем можно загружать из БД или удалённого источника
+         * Создаёт список стандартных тем (всегда доступны)
          */
-        fun getDefaultThemes(currentStatus: UserStatus): List<ThemeItem> {
+        fun getStandardThemes(): List<ThemeItem> {
             return listOf(
-                // Стандартные темы (всегда доступны)
                 ThemeItem(
-                    id = "theme_default",
-                    name = "Классическая",
-                    previewColor = "#FFD700", // Золотой
+                    id = "theme_dark",
+                    name = "Тёмная",
+                    previewDrawable = R.drawable.todobackground,
+                    overlayDrawable = R.drawable.theme_overlay_dark,
                     requiredStatus = UserStatus.BEGINNER,
                     isExclusive = false,
-                    isUnlocked = true
+                    isUnlocked = true,
+                    isDark = true
                 ),
                 ThemeItem(
                     id = "theme_light",
                     name = "Светлая",
-                    previewColor = "#E3F2FD", // Светло-голубой
+                    previewDrawable = R.drawable.todobackground,
+                    overlayDrawable = R.drawable.theme_overlay_light,
                     requiredStatus = UserStatus.BEGINNER,
                     isExclusive = false,
-                    isUnlocked = true
-                ),
-                // Эксклюзивные темы (требуют статус)
+                    isUnlocked = true,
+                    isDark = false
+                )
+            )
+        }
+
+        /**
+         * Создаёт список эксклюзивных тем с учётом статуса пользователя
+         */
+        fun getExclusiveThemes(currentStatus: UserStatus): List<ThemeItem> {
+            return listOf(
                 ThemeItem(
                     id = "theme_average",
                     name = "Average",
-                    previewColor = "#FF8A65", // Оранжевый градиент
+                    previewDrawable = R.drawable.genius1,
                     requiredStatus = UserStatus.AVERAGE,
                     isExclusive = true,
                     isUnlocked = currentStatus.level >= UserStatus.AVERAGE.level
@@ -56,7 +61,7 @@ data class ThemeItem(
                 ThemeItem(
                     id = "theme_advanced",
                     name = "Advanced",
-                    previewColor = "#2196F3", // Синий
+                    previewDrawable = R.drawable.genius2,
                     requiredStatus = UserStatus.ADVANCED,
                     isExclusive = true,
                     isUnlocked = currentStatus.level >= UserStatus.ADVANCED.level
@@ -64,10 +69,18 @@ data class ThemeItem(
                 ThemeItem(
                     id = "theme_genius",
                     name = "The Genius",
-                    previewColor = "#FF9800", // Оранжевый
+                    previewDrawable = R.drawable.genius3,
                     requiredStatus = UserStatus.GENIUS,
                     isExclusive = true,
                     isUnlocked = currentStatus.level >= UserStatus.GENIUS.level
+                ),
+                ThemeItem(
+                    id = "theme_insane",
+                    name = "Insane",
+                    previewDrawable = R.drawable.genius4,
+                    requiredStatus = UserStatus.INSANE,
+                    isExclusive = true,
+                    isUnlocked = currentStatus.level >= UserStatus.INSANE.level
                 )
             )
         }

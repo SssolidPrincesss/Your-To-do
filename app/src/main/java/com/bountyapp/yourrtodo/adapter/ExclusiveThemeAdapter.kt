@@ -1,7 +1,6 @@
-// com/bountyapp/yourrtodo/adapter/ThemeAdapter.kt
+// com/bountyapp/yourrtodo/adapter/ExclusiveThemeAdapter.kt
 package com.bountyapp.yourrtodo.adapter
 
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,18 +13,14 @@ import com.bountyapp.yourrtodo.R
 import com.bountyapp.yourrtodo.model.ThemeItem
 
 /**
- * Адаптер для отображения списка эксклюзивных тем
- * Использует ListAdapter для автоматического обновления UI
+ * Адаптер для списка эксклюзивных тем с превью
  */
-class ThemeAdapter(
+class ExclusiveThemeAdapter(
     private val onThemeClick: (ThemeItem) -> Unit
-) : ListAdapter<ThemeItem, ThemeAdapter.ThemeViewHolder>(ThemeDiffCallback()) {
+) : ListAdapter<ThemeItem, ExclusiveThemeAdapter.ThemeViewHolder>(ThemeDiffCallback()) {
 
     private var selectedThemeId: String? = null
 
-    /**
-     * Устанавливает ID выбранной темы для подсветки
-     */
     fun setSelectedThemeId(themeId: String?) {
         selectedThemeId = themeId
         notifyDataSetChanged()
@@ -49,50 +44,47 @@ class ThemeAdapter(
         private val lockIcon: ImageView = itemView.findViewById(R.id.lock_icon)
         private val statusLabel: TextView = itemView.findViewById(R.id.status_label)
         private val checkmark: ImageView = itemView.findViewById(R.id.selected_checkmark)
+        private val overlay: View = itemView.findViewById(R.id.theme_overlay)
 
-        /**
-         * Привязывает данные темы к views
-         * @param theme Данные темы
-         * @param isSelected true если тема выбрана пользователем
-         */
         fun bind(theme: ThemeItem, isSelected: Boolean) {
             themeName.text = theme.name
 
-            // Изображение превью (вместо цвета)
+            // Превью темы
             if (theme.previewDrawable != 0) {
                 previewImage.setImageResource(theme.previewDrawable)
-            } else {
-                previewImage.setBackgroundColor(Color.parseColor("#9E9E9E"))
             }
 
             // Статус блокировки
             if (theme.isUnlocked) {
                 lockIcon.visibility = View.GONE
                 statusLabel.visibility = View.GONE
+                overlay.visibility = View.GONE
                 itemView.alpha = 1.0f
             } else {
                 lockIcon.visibility = View.VISIBLE
                 statusLabel.visibility = View.VISIBLE
                 statusLabel.text = "Закрыт: ${theme.requiredStatus.title}"
-                itemView.alpha = 0.6f
+                overlay.visibility = View.VISIBLE
+                itemView.alpha = 0.7f
             }
 
             // Маркер выбранной темы
             checkmark.visibility = if (isSelected) View.VISIBLE else View.GONE
+
+            // Подсветка выбранной карточки
+            val cardView = itemView as? com.google.android.material.card.MaterialCardView
+            cardView?.apply {
+                strokeWidth = if (isSelected) 4 else 0
+                strokeColor = itemView.context.getColor(R.color.yellow_star)
+            }
         }
     }
 
-    /**
-     * DiffUtil для эффективного обновления списка
-     * Сравнивает элементы и обновляет только изменённые
-     */
     private class ThemeDiffCallback : DiffUtil.ItemCallback<ThemeItem>() {
-        override fun areItemsTheSame(oldItem: ThemeItem, newItem: ThemeItem): Boolean {
-            return oldItem.id == newItem.id
-        }
+        override fun areItemsTheSame(oldItem: ThemeItem, newItem: ThemeItem) =
+            oldItem.id == newItem.id
 
-        override fun areContentsTheSame(oldItem: ThemeItem, newItem: ThemeItem): Boolean {
-            return oldItem == newItem
-        }
+        override fun areContentsTheSame(oldItem: ThemeItem, newItem: ThemeItem) =
+            oldItem == newItem
     }
 }

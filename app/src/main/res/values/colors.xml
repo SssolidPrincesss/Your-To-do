@@ -11,6 +11,10 @@
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="search_highlight">#FFFF00</color>
 
+    <!-- Цвета карточек -->
+    <color name="gray_card_bg">#E0E0E0</color>
+    <color name="blue_card_bg">#BBDEFB</color>
+
     <!-- Цвета статусов для геймификации -->
     <color name="status_pending">#FFC107</color>    <!-- Желтый - в ожидании -->
     <color name="status_in_progress">#2196F3</color> <!-- Синий - в процессе -->

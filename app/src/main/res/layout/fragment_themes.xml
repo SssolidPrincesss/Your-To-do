@@ -5,28 +5,213 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Верхняя панель с кнопкой "Назад" -->
+    <!-- Верхняя панель только с кнопкой "Назад" -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
         app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="Темы"
-        app:titleCentered="true"
+        app:navigationIconTint="@color/text_primary"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Список тем -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerViewThemes"
+    <!-- ScrollView с fillViewport для корректного отображения -->
+    <ScrollView
+        android:id="@+id/scrollViewThemes"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:padding="16dp"
-        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:overScrollMode="never"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:clipToPadding="false">
+
+            <!-- ==================== БЛОК 1: Стандартные темы ==================== -->
+            <TextView
+                android:id="@+id/titleStandardThemes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Тема"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginBottom="12dp"
+                android:layout_gravity="center_horizontal" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardStandardThemes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="24dp"
+                app:cardBackgroundColor="@color/gray_card_bg"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center">
+
+                    <!-- Тёмная тема -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardDarkTheme"
+                        android:layout_width="0dp"
+                        android:layout_height="120dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="4dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
+
+                        <FrameLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent">
+
+                            <ImageView
+                                android:id="@+id/previewDarkTheme"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/todobackground"
+                                android:contentDescription="Тёмная тема" />
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/theme_overlay_dark" />
+
+                            <ImageView
+                                android:id="@+id/checkmarkDark"
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:src="@drawable/ic_home"
+                                android:layout_gravity="bottom|end"
+                                android:layout_margin="8dp"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Тёмная"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/white"
+                                android:layout_gravity="bottom|start"
+                                android:layout_margin="8dp" />
+                        </FrameLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Светлая тема -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardLightTheme"
+                        android:layout_width="0dp"
+                        android:layout_height="120dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="4dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
+
+                        <FrameLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent">
+
+                            <ImageView
+                                android:id="@+id/previewLightTheme"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="centerCrop"
+                                android:src="@drawable/todobackground"
+                                android:contentDescription="Светлая тема" />
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/theme_overlay_light" />
+
+                            <ImageView
+                                android:id="@+id/checkmarkLight"
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:src="@drawable/ic_home"
+                                android:layout_gravity="bottom|end"
+                                android:layout_margin="8dp"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Светлая"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/white"
+                                android:layout_gravity="bottom|start"
+                                android:layout_margin="8dp" />
+                        </FrameLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ==================== БЛОК 2: Эксклюзивные темы ==================== -->
+            <TextView
+                android:id="@+id/titleExclusiveThemes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Эксклюзивные темы"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginBottom="12dp"
+                android:layout_gravity="center_horizontal" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardExclusiveThemes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="24dp"
+                app:cardBackgroundColor="@color/blue_card_bg"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Исправленный RecyclerView для эксклюзивных тем -->
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recyclerViewExclusive"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never"
+                        android:clipToPadding="false"
+                        android:isScrollContainer="false" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Отступ снизу для комфортной прокрутки -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="32dp" />
+
+        </LinearLayout>
+    </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>
